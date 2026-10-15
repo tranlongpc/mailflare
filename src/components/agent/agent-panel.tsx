@@ -4,7 +4,7 @@ import "./style.scss"
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
-import { ArrowLeft, FileText, ListChecks, LoaderCircle, Maximize2, Minimize2, Pause, PauseCircle, PenLine, Plus, Send, Settings2, Sparkles, Square, Trash2, X } from "lucide-react";
+import { ArrowLeft, FileText, ListChecks, LoaderCircle, Maximize2, Minimize2, Pause, PenLine, Plus, Send, Settings2, Sparkles, Trash2, X } from "lucide-react";
 import { useLanguage } from "@/components/language-provider";
 import { authFetch } from "@/lib/auth/client";
 import { fetchCachedMessageDetail } from "@/lib/messages/detail-cache";
@@ -26,6 +26,10 @@ import type { ReviewSnapshot } from "./send-review-types";
 import { approveAgentAction, requestDraftReview } from "./client-actions";
 import type { AgentConversation, AgentConversationsResponse, AgentErrorResponse, AgentEvent, AgentHistoryResponse, AgentJob, AgentJobsResponse, AgentMessage, AgentPanelProps, AgentPanelView, AgentSettings, AgentSettingsResponse, QueuedAgentMessage } from "./types";
 import { activeAgentTool, activeAgentToolLabel, appendAgentReasoning, consumeAgentStream, editQueuedAgentMessage, enqueueAgentMessage, groupAgentMessages, isAgentScrollAtBottom, markAgentDraftSent, normalizeAgentHistory, readAgentConversationId, removeQueuedAgentMessage, resizeAgentInput, saveAgentConversationId, shouldSubmitAgentInput, steerQueuedAgentMessage, uniqueAgentDraftActions } from "./utils";
+
+// `send` only runs from event handlers, but the compiler cannot tell because it is reachable from
+// handlers created inside render-time `.map` callbacks, so read the clock outside the component.
+const getTimestamp = () => Date.now();
 
 export function AgentPanel({ open, fullSize, onClose, onToggleFullSize }: AgentPanelProps) {
 	const { t } = useLanguage();
@@ -231,7 +235,7 @@ export function AgentPanel({ open, fullSize, onClose, onToggleFullSize }: AgentP
 		const generation = queueGenerationRef.current;
 		const userMessageId = crypto.randomUUID();
 		const assistantMessageId = crypto.randomUUID();
-		const startedAt = Date.now();
+		const startedAt = getTimestamp();
 		let accepted = false;
 		let streamErrored = false;
 		abort.current = controller;

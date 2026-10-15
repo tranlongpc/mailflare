@@ -15,6 +15,7 @@ import {
   Upload,
 } from "lucide-react";
 import { useLanguage } from "@/components/language-provider";
+import { useConfirm } from "@/components/shared/confirm-dialog";
 import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/shared/page-header";
 import { Alert } from "@/components/ui/alert";
@@ -45,6 +46,7 @@ import {
 
 export default function BackupsPage() {
   const { t } = useLanguage();
+  const confirm = useConfirm();
   const queryClient = useQueryClient();
   const restoreInput = useRef<HTMLInputElement | null>(null);
   const savedSettings = useRef<BackupSettings | null>(null);
@@ -123,10 +125,10 @@ export default function BackupsPage() {
             variant="bare"
             accept="application/json,.json"
             className="hidden"
-            onChange={(event) => {
+            onChange={async (event) => {
               const file = event.target.files?.[0];
               event.target.value = "";
-              if (!file || !window.confirm(t("backups.restoreConfirm"))) return;
+              if (!file || !(await confirm({ title: t("backups.restoreConfirm"), confirmLabel: t("common.restore"), destructive: true }))) return;
               restore.mutate(file);
             }}
           />

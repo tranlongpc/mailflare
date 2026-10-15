@@ -5,6 +5,7 @@ import toast from "react-hot-toast";
 import clsx from "clsx";
 import { Folder, FolderInput, FolderPlus, HardDrive, RotateCcw, Trash2, X } from "lucide-react";
 import { useLanguage } from "@/components/language-provider";
+import { useConfirm } from "@/components/shared/confirm-dialog";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu } from "@/components/ui/dropdown-menu";
 import type { DropdownItem } from "@/components/ui/dropdown-menu-types";
@@ -61,6 +62,7 @@ function buildRows(folders: FolderNode[], moving: Set<string>): FolderRow[] {
 
 export function DriveBulkActions({ selected, trashView, onDone }: { selected: DriveItemDto[]; trashView: boolean; onDone: () => void }) {
 	const { t } = useLanguage();
+	const confirm = useConfirm();
 	const [folders, setFolders] = useState<FolderNode[] | null>(null);
 	const [name, setName] = useState("");
 	const [busy, setBusy] = useState(false);
@@ -161,7 +163,7 @@ export function DriveBulkActions({ selected, trashView, onDone }: { selected: Dr
 			{ownsAll && trashView && (
 				<>
 					<Button type="button" variant="ghost" className={buttonClass} disabled={busy} onClick={() => void run(() => act("restore"), (done) => t("drive.bulkRestored", { count: done }))}><RotateCcw size={16} />{t("drive.restore")}</Button>
-					<Button type="button" variant="ghost" className={clsx(buttonClass, "text-red-600")} disabled={busy} onClick={() => { if (window.confirm(t("drive.confirmBulkDelete", { count }))) void run(() => act("delete"), (done) => t("drive.bulkDeleted", { count: done })); }}><X size={16} />{t("drive.deleteForever")}</Button>
+					<Button type="button" variant="ghost" className={clsx(buttonClass, "text-red-600")} disabled={busy} onClick={async () => { if (await confirm({ title: t("drive.confirmBulkDelete", { count }), confirmLabel: t("drive.deleteForever"), destructive: true })) void run(() => act("delete"), (done) => t("drive.bulkDeleted", { count: done })); }}><X size={16} />{t("drive.deleteForever")}</Button>
 				</>
 			)}
 		</div>

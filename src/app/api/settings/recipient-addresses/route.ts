@@ -4,6 +4,7 @@ import { ZodError } from "zod";
 import { getDb } from "@/db";
 import { users } from "@/db/schema";
 import { requireSessionUser } from "@/lib/api/auth";
+import { validationError } from "@/lib/api/responses";
 import { getEnv } from "@/lib/cloudflare";
 import type { UpdateRecipientAddressSettingsInput } from "./types";
 import { parseUpdateRecipientAddressSettingsRequest } from "./utils";
@@ -24,7 +25,8 @@ export async function PATCH(request: Request) {
 	try {
 		input = await parseUpdateRecipientAddressSettingsRequest(request);
 	} catch (error) {
-		return NextResponse.json({ error: error instanceof ZodError ? error.flatten() : "Invalid request" }, { status: 400 });
+		if (error instanceof ZodError) return validationError(error);
+		return NextResponse.json({ error: "Invalid request" }, { status: 400 });
 	}
 
 	await getDb(env)

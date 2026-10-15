@@ -12,6 +12,8 @@ export type MailboxAccessLevel = {
 	canSendAs: boolean;
 	canSendOnBehalf: boolean;
 	canManage: boolean;
+	/** Hidden read-only supervision: may look, but must not change anything the owner would see (read state, stars). */
+	supervised: boolean;
 };
 
 export type AuditAction =

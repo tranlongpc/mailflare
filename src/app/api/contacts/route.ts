@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { getDb } from "@/db";
-import { requireUser } from "@/lib/auth/cookies";
+import { requireSessionUser } from "@/lib/api/auth";
 import { getEnv } from "@/lib/cloudflare";
+import { readJson } from "@/lib/api/responses";
 import { normalizeEmailAddress } from "@/lib/email/address";
 import { getMailboxAccessLevel } from "@/lib/mailboxes/access";
 import { getPersonalIdentityForAddress, syncPersonalIdentity } from "@/lib/profile/sync";
@@ -10,7 +11,9 @@ import { getContactByEmail, saveManualContactName, toContactDetails } from "./ut
 
 export async function GET(request: Request) {
 	const env = getEnv();
-	const user = await requireUser(env, request);
+	const session = await requireSessionUser(env, request);
+	if (session.error) return session.error;
+	const user = session.user;
 	const url = new URL(request.url);
 	const mailboxId = url.searchParams.get("mailboxId");
 	const email = normalizeEmailAddress(url.searchParams.get("address") ?? "");
@@ -50,8 +53,12 @@ export async function GET(request: Request) {
 
 export async function PATCH(request: Request) {
 	const env = getEnv();
-	const user = await requireUser(env, request);
-	const body = (await request.json()) as ContactRequestInput;
+	const session = await requireSessionUser(env, request);
+	if (session.error) return session.error;
+	const user = session.user;
+	const parsedBody = await readJson<ContactRequestInput>(request);
+	if (parsedBody.error) return parsedBody.error;
+	const body = (parsedBody.data ?? {}) as ContactRequestInput;
 	const email = normalizeEmailAddress(body.address ?? "");
 	const displayName = body.displayName?.trim() ?? "";
 	if (!body.mailboxId || !email || !displayName || displayName.length > 100) {

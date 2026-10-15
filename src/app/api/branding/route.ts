@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { assertPrimaryAdmin } from "@/lib/auth/admin";
-import { requireUser } from "@/lib/auth/cookies";
+import { requireSessionUser } from "@/lib/api/auth";
 import { getBranding, updateBranding } from "@/lib/branding/service";
 import { getEnv } from "@/lib/cloudflare";
 import { BRANDING_ICON_TYPES, isBrandingIcon, MAX_BRANDING_ICON_SIZE } from "./utils";
@@ -13,8 +13,10 @@ export async function GET() {
 
 export async function PUT(request: Request) {
 	const env = getEnv();
+	const session = await requireSessionUser(env, request);
+	if (session.error) return session.error;
 	try {
-		assertPrimaryAdmin(await requireUser(env, request));
+		assertPrimaryAdmin(session.user);
 	} catch {
 		return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 	}

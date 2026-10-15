@@ -4,7 +4,7 @@ import { z } from "zod";
 import { getDb } from "@/db";
 import { domains } from "@/db/schema";
 import { getEnv } from "@/lib/cloudflare";
-import { requireUser } from "@/lib/auth/cookies";
+import { requireSessionUser } from "@/lib/api/auth";
 import { canManageDomains } from "@/lib/auth/admin";
 import { hasValidSessionMutationOrigin } from "@/lib/auth/origin";
 import { getDomainForUser } from "@/lib/domains/service";
@@ -16,7 +16,9 @@ type Params = { params: Promise<{ id: string }> };
 export async function PUT(request: Request, { params }: Params) {
 	const { id } = await params;
 	const env = getEnv();
-	const user = await requireUser(env, request);
+	const session = await requireSessionUser(env, request);
+	if (session.error) return session.error;
+	const user = session.user;
 	if (!canManageDomains(user)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 	if (!hasValidSessionMutationOrigin(request)) return NextResponse.json({ error: "Invalid origin" }, { status: 403 });
 	const domain = await getDomainForUser(env, user.id, id);
@@ -31,7 +33,9 @@ export async function PUT(request: Request, { params }: Params) {
 export async function GET(request: Request, { params }: Params) {
 	const { id } = await params;
 	const env = getEnv();
-	const user = await requireUser(env, request);
+	const session = await requireSessionUser(env, request);
+	if (session.error) return session.error;
+	const user = session.user;
 	const domain = await getDomainForUser(env, user.id, id);
 	if (!domain) return NextResponse.json({ error: "Not found" }, { status: 404 });
 	return NextResponse.json(await receivingPresence(env, domain), { headers: { "Cache-Control": "no-store" } });
@@ -41,7 +45,9 @@ export async function GET(request: Request, { params }: Params) {
 export async function DELETE(request: Request, { params }: Params) {
 	const { id } = await params;
 	const env = getEnv();
-	const user = await requireUser(env, request);
+	const session = await requireSessionUser(env, request);
+	if (session.error) return session.error;
+	const user = session.user;
 	if (!canManageDomains(user)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 	if (!hasValidSessionMutationOrigin(request)) return NextResponse.json({ error: "Invalid origin" }, { status: 403 });
 	const domain = await getDomainForUser(env, user.id, id);

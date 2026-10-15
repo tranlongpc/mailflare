@@ -4,6 +4,7 @@ import { ZodError } from "zod";
 import { getDb } from "@/db";
 import { users } from "@/db/schema";
 import { requireSessionUser } from "@/lib/api/auth";
+import { validationError } from "@/lib/api/responses";
 import { getEnv } from "@/lib/cloudflare";
 import type { UpdateSpamSettingsInput } from "./types";
 import { parseUpdateSpamSettingsRequest } from "./utils";
@@ -23,7 +24,8 @@ export async function PATCH(request: Request) {
 	try {
 		input = await parseUpdateSpamSettingsRequest(request);
 	} catch (error) {
-		return NextResponse.json({ error: error instanceof ZodError ? error.flatten() : "Invalid request" }, { status: 400 });
+		if (error instanceof ZodError) return validationError(error);
+		return NextResponse.json({ error: "Invalid request" }, { status: 400 });
 	}
 	await getDb(env).update(users).set({ spamProtectionEnabled: input.enabled }).where(eq(users.id, auth.user.id));
 	return NextResponse.json({ enabled: input.enabled });

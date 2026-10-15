@@ -9,6 +9,7 @@ import toast, { Toaster } from "react-hot-toast";
 import clsx from "clsx";
 import { ArrowDown, ArrowUp, ChevronRight, Download, ExternalLink, Mail, MoreVertical, Pencil, RotateCcw, Share2, Trash2, UploadCloud, X } from "lucide-react";
 import { useLanguage } from "@/components/language-provider";
+import { useConfirm } from "@/components/shared/confirm-dialog";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { DropdownMenu } from "@/components/ui/dropdown-menu";
@@ -75,6 +76,7 @@ function DriveRowMenu({ item, onAction }: { item: DriveItemDto; onAction: (actio
 
 export default function DrivePage() {
 	const { t } = useLanguage();
+	const confirm = useConfirm();
 	const router = useRouter();
 	const params = useSearchParams();
 	const view = params.get("view") ?? "my";
@@ -218,13 +220,13 @@ export default function DrivePage() {
 		else setPreview(item);
 	}
 
-	function runRowAction(item: DriveItemDto, action: DriveRowAction) {
+	async function runRowAction(item: DriveItemDto, action: DriveRowAction) {
 		if (action === "open") open(item);
 		else if (action === "share") setSharing(item);
 		else if (action === "rename") setNaming({ mode: "rename", item, value: item.name });
 		else if (action === "trash") void (item.source ? mutate("/api/drive/attachments", json("POST", { action: "trash", ids: [item.id] }), t("drive.trashed")) : mutate(`/api/drive/items/${item.id}`, json("PATCH", { trashed: true }), t("drive.trashed")));
 		else if (action === "restore") void (item.source ? mutate("/api/drive/attachments", json("POST", { action: "restore", ids: [item.id] }), t("drive.restored")) : mutate(`/api/drive/items/${item.id}`, json("PATCH", { trashed: false }), t("drive.restored")));
-		else if (window.confirm(t("drive.confirmDelete", { name: item.name }))) void (item.source ? mutate("/api/drive/attachments", json("POST", { action: "delete", ids: [item.id] }), t("drive.deleted")) : mutate(`/api/drive/items/${item.id}`, { method: "DELETE" }, t("drive.deleted")));
+		else if (await confirm({ title: t("drive.confirmDelete", { name: item.name }), confirmLabel: t("drive.deleteForever"), destructive: true })) void (item.source ? mutate("/api/drive/attachments", json("POST", { action: "delete", ids: [item.id] }), t("drive.deleted")) : mutate(`/api/drive/items/${item.id}`, { method: "DELETE" }, t("drive.deleted")));
 	}
 
 	function onDragEnter(event: DragEvent) {

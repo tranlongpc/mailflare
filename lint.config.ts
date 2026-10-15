@@ -140,7 +140,10 @@ const lintConfig = {
     ],
     "no-unused-vars": [
       "warn",
-      {}
+      {
+        "argsIgnorePattern": "^_",
+        "varsIgnorePattern": "^_"
+      }
     ],
     "typescript/no-wrapper-object-types": "error",
     "typescript/prefer-as-const": "error",

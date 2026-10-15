@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { CalendarDays, Check, HardDrive, ChevronDown, Inbox, LogOut, Settings, ShieldCheck, UserPlus, UserRound, UsersRound } from "lucide-react";
+import { CalendarDays, Check, HardDrive, ChevronDown, Inbox, LogOut, Settings, ShieldCheck, UserPlus, UsersRound } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useLanguage } from "@/components/language-provider";
 import { useSelectedMailbox } from "@/components/mailbox-provider";

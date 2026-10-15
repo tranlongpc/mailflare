@@ -4,6 +4,7 @@ import { mobilePrimaryActionClass } from "@/components/page-header-utils";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 import { useLanguage } from "@/components/language-provider";
+import { useConfirm } from "@/components/shared/confirm-dialog";
 import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
@@ -23,6 +24,7 @@ import { confirmMxReplacement } from "./api";
 
 export default function DomainsPage() {
   const { t } = useLanguage();
+  const confirm = useConfirm();
   const qc = useQueryClient();
   const [hostname, setHostname] = useState("");
   // Self-hosted installs without Cloudflare credentials manage DNS by hand.
@@ -168,7 +170,7 @@ export default function DomainsPage() {
       };
       let { res, json } = await put(false);
       // Cloudflare sending refuses while another service's MX records exist.
-      if (confirmMxReplacement(res, json)) ({ res, json } = await put(true));
+      if (await confirmMxReplacement(res, json, confirm)) ({ res, json } = await put(true));
       if (!res.ok) throw new Error(json.error ?? t("domains.sendingChangeFailed"));
       if (json.warning) setSendingMessage(json.warning);
       await loadDns(id);
@@ -236,7 +238,7 @@ export default function DomainsPage() {
         };
       };
       let { res, json } = await post(false);
-      if (confirmMxReplacement(res, json)) ({ res, json } = await post(true));
+      if (await confirmMxReplacement(res, json, confirm)) ({ res, json } = await post(true));
       if (!res.ok) throw new Error(json.error ?? t("domains.dnsSetupFailed"));
       if (json.domain && json.dns) {
         const updatedView = { domain: json.domain, dns: json.dns };

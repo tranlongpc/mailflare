@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getEnv } from "@/lib/cloudflare";
-import { requireUser } from "@/lib/auth/cookies";
+import { requireSessionUser } from "@/lib/api/auth";
+import { validationError } from "@/lib/api/responses";
 import { sendEmailSchema } from "@/lib/validators";
 import { sendEmail } from "@/lib/email/send";
 import { isPastSchedule, parseSendRequest } from "./utils";
@@ -14,7 +15,9 @@ import { userOwnsDraft } from "@/app/api/drafts/utils";
 
 export async function POST(request: Request) {
 	const env = getEnv();
-	const user = await requireUser(env, request);
+	const session = await requireSessionUser(env, request);
+	if (session.error) return session.error;
+	const user = session.user;
 	let input;
 	try {
 		input = await parseSendRequest(request);
@@ -24,9 +27,7 @@ export async function POST(request: Request) {
 	}
 	const { attachments = [], draftId, ...fields } = input;
 	const parsed = sendEmailSchema.omit({ attachments: true }).safeParse(fields);
-	if (!parsed.success) {
-		return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
-	}
+	if (!parsed.success) return validationError(parsed.error);
 
 	if (isPastSchedule(parsed.data.scheduledAt)) {
 		return NextResponse.json({ error: "Scheduled time has already passed" }, { status: 400 });

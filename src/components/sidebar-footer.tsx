@@ -1,6 +1,5 @@
 "use client";
 
-import packageJson from "../../package.json";
 import { useSidebar } from "./sidebar-state";
 import { useShortcuts } from "./shortcuts";
 import { Keyboard } from "lucide-react";

@@ -1,22 +1,15 @@
-import { runScheduledDatabaseBackup } from "@/lib/backups/runner";
-import { runAgentMaintenance } from "@/lib/agent/maintenance";
-import { runTrashRetention } from "@/lib/email/trash-retention";
-import { runDriveTrashRetention } from "@/lib/drive/retention";
-import { runAccountRetention } from "@/lib/accounts/deletion";
+import { runMaintenance } from "../../worker-utils";
 
-/** Fire the daily 02:00 UTC backup and the recurring maintenance jobs, matching the cron triggers in wrangler.jsonc. */
+/** Run the same jobs as the cron triggers in wrangler.jsonc: upkeep every 5 minutes, plus the daily jobs at 02:00 UTC. */
 export function startScheduler(env: CloudflareEnv) {
-	let lastRunDay = "";
+	let lastSlot = "";
 	const timer = setInterval(() => {
-		runAgentMaintenance(env).catch((error) => console.error("Agent maintenance failed", error));
-		runTrashRetention(env).catch((error) => console.error("Trash retention failed", error));
 		const now = new Date();
-		const day = now.toISOString().slice(0, 10);
-		if (now.getUTCHours() !== 2 || lastRunDay === day) return;
-		lastRunDay = day;
-		runScheduledDatabaseBackup(env, now).catch((error) => console.error("Scheduled backup failed", error));
-		runDriveTrashRetention(env, now).catch((error) => console.error("Drive trash retention failed", error));
-		runAccountRetention(env, now).catch((error) => console.error("Account retention failed", error));
-	}, 60_000);
+		if (now.getUTCMinutes() % 5 !== 0) return;
+		const slot = now.toISOString().slice(0, 16);
+		if (slot === lastSlot) return;
+		lastSlot = slot;
+		void Promise.all(runMaintenance(env, now, now.getUTCHours() === 2 && now.getUTCMinutes() === 0));
+	}, 20_000);
 	return () => clearInterval(timer);
 }

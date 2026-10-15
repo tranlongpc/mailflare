@@ -4,6 +4,7 @@ import { createElement, useState, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Archive, Ban, BellOff, Clock, FileCode2, Forward, Mail, MailOpen, MoreVertical, Reply, ReplyAll, ShieldAlert, Trash2 } from "lucide-react";
 import { useLanguage } from "@/components/language-provider";
+import { useConfirm } from "@/components/shared/confirm-dialog";
 import { useCompose } from "@/components/compose/compose-context";
 import { MessageSourceDialog } from "@/components/messages/message-source-dialog";
 import { useMessageListVisibility } from "@/components/messages/message-list-visibility";
@@ -50,6 +51,7 @@ export function MessageActions({
 	bodyHtml,
 }: MessageActionsProps) {
 	const { t } = useLanguage();
+	const confirm = useConfirm();
 	const router = useRouter();
 	const isMobile = useIsMobile();
 	const { openDraftComposer } = useCompose();
@@ -83,7 +85,7 @@ export function MessageActions({
 	// being a no-op, after the user confirms.
 	const canDeleteForever = supportsPermanentDelete(status);
 	const deleteForever = useCallback(async () => {
-		if (!window.confirm(getPermanentDeleteConfirmText(1, t))) return;
+		if (!(await confirm({ title: getPermanentDeleteConfirmText(1, t), confirmLabel: t("common.deleteForever"), destructive: true }))) return;
 		setMoreOpen(false);
 		setPendingAction("delete");
 		setError(null);
@@ -95,7 +97,7 @@ export function MessageActions({
 			setError(deleteError instanceof PartialDeleteError ? t("actions.error.deleteSkipped") : t("actions.error.delete"));
 			setPendingAction(null);
 		}
-	}, [messageId, direction, status, router, t]);
+	}, [messageId, direction, status, router, t, confirm]);
 	const onTrashClick = () => (canDeleteForever ? void deleteForever() : void runAction("trash"));
 	const trashLabel = canDeleteForever ? t("common.deleteForever") : t("actions.moveToTrash");
 
@@ -111,6 +113,7 @@ export function MessageActions({
 	}, [message, direction, senderAddress]);
 	const canReplyAll = hasAdditionalRecipients(replyable, ownAddresses);
 
+	const sentAt = messageMeta?.createdAt;
 	const handleReply = useCallback(async (mode: ReplyMode) => {
 		setPendingAction(mode);
 		setError(null);
@@ -122,7 +125,7 @@ export function MessageActions({
 				subject,
 				bodyText,
 				bodyHtml,
-				sentAt: messageMeta?.createdAt,
+				sentAt,
 				recipients: getReplyRecipients(replyable, ownAddresses, mode),
 				threading: getReplyThreading(replyable),
 			});
@@ -132,7 +135,7 @@ export function MessageActions({
 		} finally {
 			setPendingAction(null);
 		}
-	}, [mailboxId, senderAddress, ownAddress, subject, bodyText, bodyHtml, messageMeta?.createdAt, replyable, ownAddresses, openDraftComposer, t]);
+	}, [mailboxId, senderAddress, ownAddress, subject, bodyText, bodyHtml, sentAt, replyable, ownAddresses, openDraftComposer, t]);
 
 	const shortcuts = useMemo(
 		() => [
@@ -194,7 +197,7 @@ export function MessageActions({
 			return;
 		}
 
-		if (!confirmTrashWithoutUnsubscribe()) return;
+		if (!(await confirmTrashWithoutUnsubscribe(confirm))) return;
 		setPendingAction("unsubscribe");
 		if (!mailboxId) {
 			setError(t("actions.error.trashRule"));

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useLanguage } from "@/components/language-provider";
+import { useConfirm } from "@/components/shared/confirm-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { AwsCapabilityReport, AwsConfigStatus } from "@/lib/aws/aws-types";
@@ -30,6 +31,7 @@ function isCapabilityReport(value: unknown): value is AwsCapabilityReport {
  */
 export default function AwsCredentialsPanel({ need, onChanged }: Props) {
 	const { t } = useLanguage();
+	const confirm = useConfirm();
 	const [status, setStatus] = useState<AwsConfigStatus | null>(null);
 	const [policy, setPolicy] = useState<unknown>(null);
 	const [report, setReport] = useState<AwsCapabilityReport | null>(null);
@@ -94,14 +96,16 @@ export default function AwsCredentialsPanel({ need, onChanged }: Props) {
 		setRejected(null);
 		onChanged?.(true, data.report);
 	});
-	const remove = () => run("remove", async () => {
-		if (!window.confirm(t("aws.removeConfirm"))) return;
-		const data = await requestJson<{ status: AwsConfigStatus }>("/api/admin/aws", "DELETE", {});
-		setStatus(data.status);
-		setReport(null);
-		setRejected(null);
-		onChanged?.(false, null);
-	});
+	const remove = async () => {
+		if (!(await confirm({ title: t("aws.removeConfirm"), confirmLabel: t("resend.remove"), destructive: true }))) return;
+		await run("remove", async () => {
+			const data = await requestJson<{ status: AwsConfigStatus }>("/api/admin/aws", "DELETE", {});
+			setStatus(data.status);
+			setReport(null);
+			setRejected(null);
+			onChanged?.(false, null);
+		});
+	};
 
 	const configured = !!status?.configured;
 	const showForm = status !== null && (!configured || editing);

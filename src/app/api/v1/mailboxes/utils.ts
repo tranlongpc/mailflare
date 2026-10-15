@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { validationError } from "@/lib/api/responses";
 import { and, eq, or } from "drizzle-orm";
 import { getEnv } from "@/lib/cloudflare";
 import { getDb } from "@/db";
@@ -27,7 +28,7 @@ export async function POST(request: Request) {
 	const auth = await authenticateAdminApiKey(env, request, "mailboxes");
 	if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 	const parsed = mailboxSchema.safeParse(await request.json().catch(() => null));
-	if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
+	if (!parsed.success) return validationError(parsed.error);
 	const db = getDb(env);
 	const mailboxType = parsed.data.type ?? "personal";
 	if (mailboxType === "shared" && !(await canShareAdminMailboxes(env))) return NextResponse.json({ error: "A Team license is required to create shared inboxes" }, { status: 403 });

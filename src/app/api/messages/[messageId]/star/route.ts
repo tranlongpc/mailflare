@@ -25,6 +25,7 @@ export async function POST(
 
 	const access = await getMailboxAccessLevel(db, user, message.mailboxId);
 	if (!access?.canRead) return NextResponse.json({ error: "Message not found" }, { status: 404 });
+	if (access.supervised) return NextResponse.json({ error: "This mailbox is view-only" }, { status: 403 });
 
 	const starred = !message.starred;
 	await db.update(messages).set({ starred }).where(eq(messages.id, message.id));

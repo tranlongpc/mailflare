@@ -1,13 +1,15 @@
 import { NextResponse } from "next/server";
 import { getDb } from "@/db";
-import { requireUser } from "@/lib/auth/cookies";
+import { requireSessionUser } from "@/lib/api/auth";
 import { getEnv } from "@/lib/cloudflare";
 import { exportMailboxToMbox } from "@/lib/export/mbox";
 import { getMailboxAccessLevel } from "@/lib/mailboxes/access";
 
 export async function GET(request: Request) {
 	const env = getEnv();
-	const user = await requireUser(env, request);
+	const session = await requireSessionUser(env, request);
+	if (session.error) return session.error;
+	const user = session.user;
 	const url = new URL(request.url);
 	const mailboxId = url.searchParams.get("mailboxId");
 	if (!mailboxId) return NextResponse.json({ error: "Mailbox is required" }, { status: 400 });

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useLanguage } from "@/components/language-provider";
+import { useConfirm } from "@/components/shared/confirm-dialog";
 import { Button } from "@/components/ui/button";
 import type { ReceivingStep } from "@/lib/aws/ses-receiving-types";
 import AwsCredentialsPanel from "./AwsCredentialsPanel";
@@ -30,6 +31,7 @@ const COPY = {
 /** Checklist and setup button for receiving through Resend or Amazon SES. */
 export default function ReceivingProviderConfig({ domainId, provider, onReady }: Props) {
 	const { t } = useLanguage();
+	const confirm = useConfirm();
 	const [credentials, setCredentials] = useState<boolean | null>(null);
 	const [view, setView] = useState<ViewResponse["view"]>(null);
 	const [loading, setLoading] = useState(true);
@@ -63,7 +65,7 @@ export default function ReceivingProviderConfig({ domainId, provider, onReady }:
 		setError("");
 		setNotice("");
 		try {
-			const done = await runReceivingSetup(domainId, provider);
+			const done = await runReceivingSetup(domainId, provider, confirm);
 			if (done) setNotice(t("domains.setupFinished"));
 			refresh();
 		} catch (err) {

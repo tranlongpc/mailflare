@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { getDb } from "@/db";
-import { domains, mailboxAccess, mailboxes } from "@/db/schema";
+import { domains, mailboxAccess, mailboxes, mailboxSupervisors } from "@/db/schema";
 import { isTeamMailboxSharingEnabled } from "@/lib/mailboxes/access-utils";
 import type { NewMessageNotification, AgentDraftNotification } from "./types";
 import { sendPushNotifications } from "@/lib/push/server";
@@ -39,12 +39,18 @@ export async function getMailboxNotificationUserIds(
 			.where(eq(mailboxAccess.mailboxId, mailboxId)))
 			.map((access) => access.userId)
 		: [];
+	const supervisorUserIds = (await db
+		.select({ userId: mailboxSupervisors.supervisorUserId })
+		.from(mailboxSupervisors)
+		.where(eq(mailboxSupervisors.mailboxId, mailboxId)))
+		.map((row) => row.userId);
 
 	return [
 		...new Set([
 			ownerUserId,
 			mailboxRows[0]?.domainOwnerUserId,
 			...sharedUserIds,
+			...supervisorUserIds,
 		].filter((userId): userId is string => !!userId)),
 	];
 }

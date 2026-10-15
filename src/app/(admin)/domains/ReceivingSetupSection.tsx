@@ -2,6 +2,7 @@
 
 import { useEffect, useState, type ReactNode } from "react";
 import { useLanguage } from "@/components/language-provider";
+import { useConfirm } from "@/components/shared/confirm-dialog";
 import type { TranslationKey } from "@/lib/i18n/types";
 import { requestJson } from "./api";
 import ProviderCard from "./ProviderCard";
@@ -29,6 +30,7 @@ type Props = {
 
 export default function ReceivingSetupSection({ domain, onChange, busy, message, cloudflareConfig, cloudflareOk }: Props) {
 	const { t } = useLanguage();
+	const confirm = useConfirm();
 	const [present, setPresent] = useState<Present>({ cloudflare: null, resend: null, ses: null });
 	const [ready, setReady] = useState<Record<"resend" | "ses", boolean | null>>({ resend: null, ses: null });
 	const [reload, setReload] = useState(0);
@@ -44,7 +46,7 @@ export default function ReceivingSetupSection({ domain, onChange, busy, message,
 	}, [domain.id, domain.receivingProvider, reload]);
 
 	async function cleanUp(option: Option, title: string) {
-		if (!window.confirm(t("domains.removeReceivingConfirm", { title, host: domain.hostname }))) return;
+		if (!(await confirm({ title: t("domains.removeReceivingConfirm", { title, host: domain.hostname }), confirmLabel: t("domains.cleanUp"), destructive: true }))) return;
 		setRemoving(option);
 		setError("");
 		try {

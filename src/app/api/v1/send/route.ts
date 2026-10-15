@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getEnv } from "@/lib/cloudflare";
 import { authenticateApiKey, requireScope } from "@/lib/api/auth";
+import { validationError } from "@/lib/api/responses";
 import { sendEmailSchema } from "@/lib/validators";
 import { sendEmail } from "@/lib/email/send";
 import { decodeBase64Content } from "@/lib/email/attachments";
@@ -23,9 +24,7 @@ export async function POST(request: Request) {
 		return NextResponse.json({ error: "Invalid send request" }, { status });
 	}
 	const parsed = sendEmailSchema.safeParse(body);
-	if (!parsed.success) {
-		return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
-	}
+	if (!parsed.success) return validationError(parsed.error);
 	if (auth.mailboxIds && !auth.mailboxIds.includes(parsed.data.mailboxId)) {
 		return NextResponse.json({ error: "Mailbox not found" }, { status: 404 });
 	}

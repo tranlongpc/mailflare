@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Copy, KeyRound, Plus, Trash2 } from "lucide-react";
 import { useLanguage } from "@/components/language-provider";
+import { useConfirm } from "@/components/shared/confirm-dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog } from "@/components/ui/dialog";
@@ -22,6 +23,7 @@ import { ADMIN_KEY_PERMISSIONS, parseApiKeyScopes } from "./utils";
 
 export default function ApiKeysPage() {
 	const { t } = useLanguage();
+	const confirm = useConfirm();
 	const qc = useQueryClient();
 	const [name, setName] = useState("");
 	const [scopes, setScopes] = useState<AdminApiKeyScope[]>(["domains"]);
@@ -152,7 +154,7 @@ export default function ApiKeysPage() {
 									))}
 								</span>
 							</span>
-						<Button type="button" size="sm" variant="outline" disabled={revoke.isPending} onClick={() => { if (window.confirm(t("apiKeys.revokeConfirm", { name: key.name }))) revoke.mutate(key.id); }}><Trash2 className="h-4 w-4" />{t("common.revoke")}</Button>
+						<Button type="button" size="sm" variant="outline" disabled={revoke.isPending} onClick={async () => { if (await confirm({ title: t("apiKeys.revokeConfirm", { name: key.name }), confirmLabel: t("common.revoke"), destructive: true })) revoke.mutate(key.id); }}><Trash2 className="h-4 w-4" />{t("common.revoke")}</Button>
 						</ListRow>
 					))}
 				</List>

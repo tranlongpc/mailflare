@@ -14,6 +14,7 @@ import type { DomainProvisioningChanges } from "@/lib/domains/types";
 import { ensureEmailRoutingRuleToWorker } from "@/lib/cloudflare-api";
 import { ensureMailboxDomainRouting } from "@/lib/mailboxes/domain-addresses";
 import { readJsonBody } from "@/lib/http/request";
+import { validationError } from "@/lib/api/responses";
 import { RequestBodyTooLargeError } from "@/lib/http/errors";
 import { verifyTurnstileToken } from "@/lib/auth/turnstile";
 import { getDomainProvisioningError } from "@/lib/domains/errors";
@@ -34,9 +35,7 @@ export async function POST(request: Request) {
 		return NextResponse.json({ error: "Invalid registration request" }, { status });
 	}
 	const firstRunParsed = firstRunRegisterSchema.safeParse(body);
-	if (!firstRunParsed.success) {
-		return NextResponse.json({ error: firstRunParsed.error.flatten() }, { status: 400 });
-	}
+	if (!firstRunParsed.success) return validationError(firstRunParsed.error);
 	if (!(await verifyTurnstileToken(env, request, (body as Record<string, unknown>).turnstileToken))) {
 		return NextResponse.json({ error: "Verification failed. Please try again." }, { status: 400 });
 	}

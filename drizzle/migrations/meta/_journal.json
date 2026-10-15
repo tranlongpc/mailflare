@@ -400,6 +400,13 @@
       "when": 1788850805023,
       "tag": "0064_add_storage_config",
       "breakpoints": true
+    },
+    {
+      "idx": 57,
+      "version": "6",
+      "when": 1788850806023,
+      "tag": "0065_add_mailbox_supervisors",
+      "breakpoints": true
     }
   ]
 }

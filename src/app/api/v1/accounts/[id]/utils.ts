@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { validationError } from "@/lib/api/responses";
 import { eq } from "drizzle-orm";
 import { getEnv } from "@/lib/cloudflare";
 import { getDb } from "@/db";
@@ -36,7 +37,7 @@ export async function PATCH(request: Request, { params }: AdminAccountRouteParam
 	const account = await selectAccountById(db, id);
 	if (!account || (account.id !== auth.userId && account.createdByUserId !== auth.userId)) return NextResponse.json({ error: "Account not found" }, { status: 404 });
 	const parsed = updateManagedAccountSchema.safeParse(await request.json().catch(() => null));
-	if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
+	if (!parsed.success) return validationError(parsed.error);
 	if (!isPrimaryAdmin(auth.user) && (account.isPrimaryAdmin || account.role === "admin" || parsed.data.role !== account.role)) {
 		return NextResponse.json({ error: "Only the primary admin can manage admin accounts" }, { status: 403 });
 	}

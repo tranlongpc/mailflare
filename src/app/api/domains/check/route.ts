@@ -1,16 +1,18 @@
 import { NextResponse } from "next/server";
-import { requireUser } from "@/lib/auth/cookies";
+import { readJson, validationError } from "@/lib/api/responses";
+import { requireSessionUser } from "@/lib/api/auth";
 import { getEnv } from "@/lib/cloudflare";
 import { preflightDomain } from "@/lib/domains/preflight";
 import { setupDomainSchema } from "@/lib/validators";
 
 export async function POST(request: Request) {
 	const env = getEnv();
-	await requireUser(env, request);
-	const parsed = setupDomainSchema.safeParse(await request.json());
-	if (!parsed.success) {
-		return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
-	}
+	const session = await requireSessionUser(env, request);
+	if (session.error) return session.error;
+	const body = await readJson<unknown>(request);
+	if (body.error) return body.error;
+	const parsed = setupDomainSchema.safeParse(body.data);
+	if (!parsed.success) return validationError(parsed.error);
 
 	try {
 		return NextResponse.json({ domain: await preflightDomain(env, parsed.data.hostname) });

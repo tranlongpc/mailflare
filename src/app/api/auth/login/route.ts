@@ -11,6 +11,7 @@ import { loginSchema } from "@/lib/validators";
 import { allowLoginAttempt } from "@/lib/auth/rate-limit";
 import { verifyTurnstileToken } from "@/lib/auth/turnstile";
 import { readJsonBody } from "@/lib/http/request";
+import { validationError } from "@/lib/api/responses";
 import { RequestBodyTooLargeError } from "@/lib/http/errors";
 import { recordAuthActivity } from "@/lib/auth/activity";
 import { createLoginChallenge } from "@/lib/auth/login-challenge";
@@ -25,9 +26,7 @@ export async function POST(request: Request) {
 		return NextResponse.json({ error: "Invalid login request" }, { status });
 	}
 	const parsed = loginSchema.safeParse(body);
-	if (!parsed.success) {
-		return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
-	}
+	if (!parsed.success) return validationError(parsed.error);
 	if (!(await allowLoginAttempt(env, request))) {
 		return NextResponse.json(
 			{ error: "Too many login attempts. Try again shortly." },

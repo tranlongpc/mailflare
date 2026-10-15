@@ -4,6 +4,7 @@ import { mobilePrimaryActionAboveNavClass } from "@/components/page-header-utils
 import { useEffect, useState } from "react";
 import { Copy, KeyRound, Plus, Trash2 } from "lucide-react";
 import { useLanguage } from "@/components/language-provider";
+import { useConfirm } from "@/components/shared/confirm-dialog";
 import { useSelectedMailbox } from "@/components/mailbox-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -22,6 +23,7 @@ import { createManagedApiKey, keyPermissions, loadManagedApiKeys, MCP_KEY_SCOPES
 
 export function ApiKeysSettings() {
 	const { t } = useLanguage();
+	const confirm = useConfirm();
 	const { mailboxes, selectedMailbox } = useSelectedMailbox();
 	const [keys, setKeys] = useState<ManagedApiKey[]>([]);
 	const [loading, setLoading] = useState(true);
@@ -63,7 +65,7 @@ export function ApiKeysSettings() {
 	}
 
 	async function revoke(key: ManagedApiKey) {
-		if (!window.confirm(t("apiKeys.revokeConfirm", { name: key.name }))) return;
+		if (!(await confirm({ title: t("apiKeys.revokeConfirm", { name: key.name }), confirmLabel: t("common.revoke"), destructive: true }))) return;
 		setRevokingId(key.id);
 		setError(null);
 		try {

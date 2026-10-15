@@ -4,6 +4,7 @@ import { ZodError } from "zod";
 import { getDb } from "@/db";
 import { contacts, users } from "@/db/schema";
 import { requireSessionUser } from "@/lib/api/auth";
+import { validationError } from "@/lib/api/responses";
 import { getEnv } from "@/lib/cloudflare";
 import { getContactId } from "@/lib/contacts/utils";
 import { trustRemoteContentSenderSchema, updateRemoteContentSettingsSchema } from "@/lib/validators";
@@ -35,7 +36,8 @@ export async function PATCH(request: Request) {
 	try {
 		({ mode } = updateRemoteContentSettingsSchema.parse(await request.json()));
 	} catch (error) {
-		return NextResponse.json({ error: error instanceof ZodError ? error.flatten() : "Invalid request" }, { status: 400 });
+		if (error instanceof ZodError) return validationError(error);
+		return NextResponse.json({ error: "Invalid request" }, { status: 400 });
 	}
 
 	await getDb(env).update(users).set({ remoteContentMode: mode }).where(eq(users.id, auth.user.id));
@@ -52,7 +54,8 @@ export async function POST(request: Request) {
 	try {
 		({ sender } = trustRemoteContentSenderSchema.parse(await request.json()));
 	} catch (error) {
-		return NextResponse.json({ error: error instanceof ZodError ? error.flatten() : "Invalid request" }, { status: 400 });
+		if (error instanceof ZodError) return validationError(error);
+		return NextResponse.json({ error: "Invalid request" }, { status: 400 });
 	}
 
 	await getDb(env)

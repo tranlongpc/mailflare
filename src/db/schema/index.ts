@@ -162,6 +162,32 @@ export const mailboxAccess = sqliteTable(
 	],
 );
 
+/**
+ * Hidden read-only access to any mailbox, granted by the primary admin. Kept apart from mailbox_access so it never
+ * shows in sharing lists, works for personal mailboxes and needs no license; a supervisor cannot change read state,
+ * stars or anything else the owner would notice (see `supervised` in src/lib/mailboxes/access.ts).
+ */
+export const mailboxSupervisors = sqliteTable(
+	"mailbox_supervisors",
+	{
+		id: text("id").primaryKey(),
+		mailboxId: text("mailbox_id")
+			.notNull()
+			.references(() => mailboxes.id, { onDelete: "cascade" }),
+		supervisorUserId: text("supervisor_user_id")
+			.notNull()
+			.references(() => users.id, { onDelete: "cascade" }),
+		createdByUserId: text("created_by_user_id").references(() => users.id, { onDelete: "set null" }),
+		createdAt: integer("created_at", { mode: "timestamp" })
+			.notNull()
+			.$defaultFn(() => new Date()),
+	},
+	(t) => [
+		uniqueIndex("mailbox_supervisors_mailbox_user_idx").on(t.mailboxId, t.supervisorUserId),
+		index("mailbox_supervisors_user_idx").on(t.supervisorUserId),
+	],
+);
+
 export const contacts = sqliteTable(
 	"contacts",
 	{

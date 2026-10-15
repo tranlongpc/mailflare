@@ -1,28 +1,16 @@
 import { withStorage } from "./src/lib/storage";
 import vinextHandler from "vinext/server/fetch-handler";
-import {
-	processInboundMessage,
-	storeRawToR2,
-	type InboundQueueMessage,
-} from "./src/lib/email/inbound";
-import { processOutboundQueue, type OutboundQueueMessage } from "./src/lib/email/send";
-import { isInboundQueueMessage, isWebhookRetryMessage } from "./worker-utils";
-import { processWebhookRetry, type WebhookRetryMessage } from "./src/lib/email/webhooks";
+import { storeRawToR2, type InboundQueueMessage } from "./src/lib/email/inbound";
+import { dispatchQueueMessage, isInboundQueueMessage, runMaintenance } from "./worker-utils";
 import { resolveIncomingMail, forwardMessage } from "./src/lib/email/incoming";
 import { getUserFromSession } from "./src/lib/auth/session";
 import { getSessionTokenFromRequest } from "./src/lib/realtime/utils";
 import { inboundAttachmentLimitReasonFromRaw } from "./src/lib/email/inbound-attachments";
-import { hasValidSessionMutationOrigin } from "./src/lib/auth/origin";
+import { hasValidSessionMutationOrigin, rejectsCrossSiteSessionMutation } from "./src/lib/auth/origin";
 import {
 	getAccountForwardingDestination,
 	MAILFLARE_FORWARDED_HEADER,
 } from "./src/lib/email/account-forwarding";
-import { runScheduledDatabaseBackup } from "./src/lib/backups/runner";
-import { processAgentDraftJob } from "./src/lib/agent/jobs/utils";
-import { runAgentMaintenance } from "./src/lib/agent/maintenance";
-import { runTrashRetention } from "./src/lib/email/trash-retention";
-import { runDriveTrashRetention } from "./src/lib/drive/retention";
-import { runAccountRetention } from "./src/lib/accounts/deletion";
 export { RealtimeHub } from "./src/lib/realtime/hub";
 
 // workerd forbids eval(), so React's dev-only Flight client logs this once per load. It only costs richer server stack traces in dev; production never checks.
@@ -55,6 +43,10 @@ export default {
 			const hubRequest = new Request("https://mailflare-realtime/connect", request);
 			hubRequest.headers.set("X-Mailflare-Realtime-User", user.id);
 			return hub.fetch(hubRequest);
+		}
+
+		if (rejectsCrossSiteSessionMutation({ method: request.method, url, header: (name) => request.headers.get(name) })) {
+			return Response.json({ error: "Cross-site request rejected" }, { status: 403 });
 		}
 
 		return vinextHandler.fetch(request, env, ctx);
@@ -113,17 +105,7 @@ export default {
 		const env = withStorage(rawEnv);
 		for (const msg of batch.messages) {
 			try {
-				if (isInboundQueueMessage(msg.body)) {
-					await processInboundMessage(env, msg.body);
-				} else if (typeof msg.body === "object" && msg.body !== null && (msg.body as { kind?: unknown }).kind === "agent.draft" && typeof (msg.body as { jobId?: unknown }).jobId === "string") {
-					await processAgentDraftJob(env, (msg.body as { jobId: string }).jobId);
-				} else if (isWebhookRetryMessage(msg.body)) {
-					await processWebhookRetry(env, msg.body as WebhookRetryMessage);
-				} else if (typeof msg.body === "object" && msg.body !== null && (msg.body as { kind?: unknown }).kind === "email.scheduled") {
-					await processOutboundQueue(env, msg.body as OutboundQueueMessage);
-				} else {
-					throw new Error("Unknown queue message type");
-				}
+				await dispatchQueueMessage(env, msg.body);
 				msg.ack();
 			} catch (err) {
 				console.error("Queue processing failed", {
@@ -139,11 +121,7 @@ export default {
 
 	async scheduled(controller: ScheduledController, rawEnv: CloudflareEnv, ctx: ExecutionContext) {
 		const env = withStorage(rawEnv);
-		if (controller.cron === "0 2 * * *") ctx.waitUntil(runScheduledDatabaseBackup(env, new Date(controller.scheduledTime)));
-		ctx.waitUntil(runAgentMaintenance(env));
-		ctx.waitUntil(runTrashRetention(env, new Date(controller.scheduledTime)));
-		if (controller.cron === "0 2 * * *") ctx.waitUntil(runAccountRetention(env, new Date(controller.scheduledTime)));
-		// Drive trash is emptied once a day, with the 02:00 UTC cron; the 5-minute cron is for queue-like upkeep.
-		if (controller.cron === "0 2 * * *") ctx.waitUntil(runDriveTrashRetention(env, new Date(controller.scheduledTime)));
+		// The 02:00 UTC cron adds the daily jobs; the 5-minute cron is queue-like upkeep.
+		ctx.waitUntil(Promise.all(runMaintenance(env, new Date(controller.scheduledTime), controller.cron === "0 2 * * *")));
 	},
 } satisfies ExportedHandler<CloudflareEnv>;

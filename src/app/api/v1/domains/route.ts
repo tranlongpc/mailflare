@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { validationError } from "@/lib/api/responses";
 import { getEnv } from "@/lib/cloudflare";
 import { authenticateAdminApiKey } from "@/lib/api/admin-auth";
 import { addDomainSchema } from "@/lib/validators";
@@ -42,9 +43,7 @@ export async function POST(request: Request) {
 	}
 
 	const parsed = addDomainSchema.safeParse(await request.json().catch(() => null));
-	if (!parsed.success) {
-		return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
-	}
+	if (!parsed.success) return validationError(parsed.error);
 
 	try {
 		const result = await addDomainForUser(env, auth.userId, parsed.data.hostname, {

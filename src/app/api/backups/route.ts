@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
-import { assertPrimaryAdmin } from "@/lib/auth/admin";
-import { requireUser } from "@/lib/auth/cookies";
+import { isPrimaryAdmin } from "@/lib/auth/admin";
+import { readJson } from "@/lib/api/responses";
+import { requireSessionUser } from "@/lib/api/auth";
 import { getBackupConfigurationStatus } from "@/lib/backups/export";
 import { runDatabaseBackup } from "@/lib/backups/runner";
 import {
@@ -14,14 +15,17 @@ import { parseBackupSettingsInput } from "./utils";
 
 async function requireAdmin(request: Request) {
 	const env = getEnv();
-	const user = await requireUser(env, request);
-	assertPrimaryAdmin(user);
-	return { env, user };
+	const session = await requireSessionUser(env, request);
+	if (session.error) return { env, user: null, error: session.error };
+	if (!isPrimaryAdmin(session.user)) return { env, user: null, error: NextResponse.json({ error: "Forbidden" }, { status: 403 }) };
+	return { env, user: session.user, error: null };
 }
 
 export async function GET(request: Request) {
+	const access = await requireAdmin(request);
+	if (access.error) return access.error;
+	const { env } = access;
 	try {
-		const { env } = await requireAdmin(request);
 		const [settings, backupList] = await Promise.all([
 			getBackupSettings(env),
 			listBackups(env),
@@ -37,9 +41,13 @@ export async function GET(request: Request) {
 }
 
 export async function PUT(request: Request) {
+	const access = await requireAdmin(request);
+	if (access.error) return access.error;
+	const { env } = access;
+	const body = await readJson<unknown>(request);
+	if (body.error) return body.error;
 	try {
-		const { env } = await requireAdmin(request);
-		const input = parseBackupSettingsInput(await request.json());
+		const input = parseBackupSettingsInput(body.data);
 		if (!input) return NextResponse.json({ error: "Invalid backup settings" }, { status: 400 });
 		await updateBackupSettings(env, input);
 		return NextResponse.json({ ok: true });
@@ -49,8 +57,10 @@ export async function PUT(request: Request) {
 }
 
 export async function POST(request: Request) {
+	const access = await requireAdmin(request);
+	if (access.error) return access.error;
+	const { env, user } = access;
 	try {
-		const { env, user } = await requireAdmin(request);
 		const backupId = await createBackupRecord(env, "manual", user.id);
 		await runDatabaseBackup(env, backupId);
 		return NextResponse.json({ backupId });

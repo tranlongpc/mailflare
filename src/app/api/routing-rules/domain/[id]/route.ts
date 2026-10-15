@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { getDb } from "@/db";
 import { routingRules } from "@/db/schema";
 import { requireSessionUser } from "@/lib/api/auth";
+import { readJson, validationError } from "@/lib/api/responses";
 import { getEnv } from "@/lib/cloudflare";
 import { domainRoutingRuleSchema } from "@/lib/validators";
 import {
@@ -44,12 +45,11 @@ export async function PATCH(request: Request, { params }: DomainRoutingRuleRoute
 	const loaded = await loadRule(request, id);
 	if (loaded.error) return loaded.error;
 
-	const body = (await request.json()) as Record<string, unknown>;
+	const body = await readJson<Record<string, unknown>>(request);
+	if (body.error) return body.error;
 	// The rule's own domain always wins, so a request cannot move a rule to another domain.
-	const parsed = domainRoutingRuleSchema.safeParse({ ...body, domainId: loaded.rule.domainId });
-	if (!parsed.success) {
-		return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
-	}
+	const parsed = domainRoutingRuleSchema.safeParse({ ...body.data, domainId: loaded.rule.domainId });
+	if (!parsed.success) return validationError(parsed.error);
 
 	const destinationAllowed = parsed.data.mailboxId
 		? loaded.adminDomain

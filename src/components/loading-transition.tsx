@@ -16,8 +16,8 @@ let hasShownInitialLoadingTransition = false;
 export function LoadingTransition({ children, ready }: LoadingTransitionProps) {
 	const { t } = useLanguage();
 	const branding = useBranding();
-	const showInitialLoader = useRef(!hasShownInitialLoadingTransition).current;
-	const startedAt = useRef(Date.now());
+	const [showInitialLoader] = useState(() => !hasShownInitialLoadingTransition);
+	const [startedAt] = useState(() => Date.now());
 	const [progress, setProgress] = useState(8);
 	const [loaderVisible, setLoaderVisible] = useState(showInitialLoader);
 	const [contentVisible, setContentVisible] = useState(!showInitialLoader);
@@ -64,7 +64,7 @@ export function LoadingTransition({ children, ready }: LoadingTransitionProps) {
 	useEffect(() => {
 		if (!canComplete) return;
 		const remaining = showInitialLoader
-			? Math.max(0, MINIMUM_LOADING_TIME - (Date.now() - startedAt.current))
+			? Math.max(0, MINIMUM_LOADING_TIME - (Date.now() - startedAt))
 			: 0;
 		const completeTimer = window.setTimeout(() => setProgress(100), remaining);
 		const revealTimer = window.setTimeout(() => {
@@ -79,7 +79,7 @@ export function LoadingTransition({ children, ready }: LoadingTransitionProps) {
 			window.clearTimeout(completeTimer);
 			window.clearTimeout(revealTimer);
 		};
-	}, [canComplete, showInitialLoader]);
+	}, [canComplete, showInitialLoader, startedAt]);
 
 	const showTopLoadingBar = initialLoadComplete && (!ready || pendingLoads > 0);
 

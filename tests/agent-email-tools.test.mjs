@@ -41,9 +41,12 @@ const { SqliteDatabase, applyMigrations, createAgentChatStream, runEmailTool, re
 test("assistant reads mail, creates an editable reply draft, and invokes tools through chat", async (t) => {
 	t.after(() => rmSync(bundleDirectory, { recursive: true, force: true }));
 	const directory = mkdtempSync(join(tmpdir(), "mailflare-agent-"));
-	t.after(() => rmSync(directory, { recursive: true, force: true }));
 	const database = new SqliteDatabase(join(directory, "mailflare.sqlite"));
-	t.after(() => database.db.close());
+	// Close before removing: Windows refuses to delete an open SQLite file.
+	t.after(() => {
+		database.db.close();
+		rmSync(directory, { recursive: true, force: true });
+	});
 	await applyMigrations(database, join(process.cwd(), "drizzle", "migrations"));
 	database.db.exec(`
 		INSERT INTO users (id, email, password_hash, name, created_at) VALUES ('user-1', 'owner@example.com', 'hash', 'Owner', 1);

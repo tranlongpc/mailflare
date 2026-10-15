@@ -5,6 +5,7 @@ import { AtSign, Save, Trash2, UserPlus } from "lucide-react";
 import { useParams, usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useLanguage } from "@/components/language-provider";
+import { useConfirm } from "@/components/shared/confirm-dialog";
 import { PageHeader } from "@/components/shared/page-header";
 import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -32,6 +33,7 @@ import MailboxAvatarForm from "./MailboxAvatarForm";
 
 export default function MailboxSettingsPage() {
   const { t } = useLanguage();
+  const confirm = useConfirm();
   const params = useParams<{ id: string }>();
   const mailboxId = params.id;
   const qc = useQueryClient();
@@ -366,11 +368,13 @@ export default function MailboxSettingsPage() {
             type="button"
             variant="destructive"
             disabled={!mailbox.data || removeMailbox.isPending}
-            onClick={() => {
+            onClick={async () => {
               if (
-                !window.confirm(
-                  t("mailbox.deleteConfirm", { address }),
-                )
+                !(await confirm({
+                  title: t("mailbox.deleteConfirm", { address }),
+                  confirmLabel: t("mailbox.delete"),
+                  destructive: true,
+                }))
               )
                 return;
               removeMailbox.mutate();

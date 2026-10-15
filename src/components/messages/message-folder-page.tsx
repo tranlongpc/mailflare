@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { MouseEvent } from "react";
 import { Archive, ChevronLeft, ChevronRight, ListFilter, Mail, MailOpen, Trash2 } from "lucide-react";
 import { useLanguage } from "@/components/language-provider";
+import { useConfirm } from "@/components/shared/confirm-dialog";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tooltip } from "@/components/ui/tooltip";
@@ -300,6 +301,7 @@ export function MessageFolderPage({
 	selection,
 }: MessageFolderPageProps) {
 	const { t } = useLanguage();
+	const confirm = useConfirm();
 	const title = config.titleKey ? t(config.titleKey) : config.title;
 	const { selectedMailbox, isLoading: mailboxesLoading } = useSelectedMailbox();
 	const { query } = useMailSearch();
@@ -417,7 +419,7 @@ export function MessageFolderPage({
 	const permanentDeleteFolder = !config.folderId && supportsPermanentDelete(config.folder) ? config.folder : null;
 	async function emptyFolder() {
 		if (!permanentDeleteFolder || !selectedMailbox?.id) return;
-		if (!window.confirm(getEmptyFolderConfirmText(permanentDeleteFolder, titleTotal, t))) return;
+		if (!(await confirm({ title: getEmptyFolderConfirmText(permanentDeleteFolder, titleTotal, t), confirmLabel: getEmptyFolderLabel(permanentDeleteFolder, t), destructive: true }))) return;
 		setEmptyingFolder(true);
 		try {
 			await emptyMessageFolder(selectedMailbox.id, permanentDeleteFolder);
@@ -449,7 +451,7 @@ export function MessageFolderPage({
 		if (selectedIds.length === 0) return;
 		if (action === "delete") {
 			const ids = expandSelectedIds(selectedIds);
-			if (!window.confirm(getPermanentDeleteConfirmText(ids.length, t))) return;
+			if (!(await confirm({ title: getPermanentDeleteConfirmText(ids.length, t), confirmLabel: t("common.deleteForever"), destructive: true }))) return;
 		}
 
 		setPendingBulkAction(true);

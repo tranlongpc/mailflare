@@ -9,6 +9,7 @@ import { createSession, SESSION_COOKIE } from "@/lib/auth/session";
 import { mfaVerifySchema } from "@/lib/validators";
 import { allowLoginAttempt } from "@/lib/auth/rate-limit";
 import { readJsonBody } from "@/lib/http/request";
+import { validationError } from "@/lib/api/responses";
 import { RequestBodyTooLargeError } from "@/lib/http/errors";
 import { recordAuthActivity } from "@/lib/auth/activity";
 import { consumeLoginChallenge, getLoginChallengeUserId } from "@/lib/auth/login-challenge";
@@ -25,9 +26,7 @@ export async function POST(request: Request) {
 		return NextResponse.json({ error: "Invalid request" }, { status });
 	}
 	const parsed = mfaVerifySchema.safeParse(body);
-	if (!parsed.success) {
-		return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
-	}
+	if (!parsed.success) return validationError(parsed.error);
 	// Codes are six digits; the login limiter is what stops brute force.
 	if (!(await allowLoginAttempt(env, request))) {
 		return NextResponse.json({ error: "Too many attempts. Try again shortly." }, { status: 429, headers: { "Retry-After": "60" } });

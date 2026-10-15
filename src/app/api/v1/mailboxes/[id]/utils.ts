@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { validationError } from "@/lib/api/responses";
 import { and, eq, or } from "drizzle-orm";
 import { getEnv } from "@/lib/cloudflare";
 import { getDb } from "@/db";
@@ -34,7 +35,7 @@ export async function PATCH(request: Request, { params }: AdminMailboxRouteParam
 	const access = await managedMailbox(request, (await params).id);
 	if (access.error) return access.error;
 	const parsed = updateMailboxSchema.safeParse(await request.json().catch(() => null));
-	if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
+	if (!parsed.success) return validationError(parsed.error);
 	const db = getDb(access.env);
 	if (parsed.data.useAllDomains === true) {
 		try {

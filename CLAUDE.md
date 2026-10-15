@@ -6,7 +6,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ```bash
 npm run dev                    # Vite + vinext in local workerd
-npm run lint                   # eslint (next/core-web-vitals + next/typescript)
+npm run lint                   # oxlint via vite-plus (rules in lint.config.ts)
+npm test                       # node --test tests/*.test.mjs
 npm run build                  # vinext build, including the complete Worker
 
 npm run db:generate            # drizzle-kit generate from src/db/schema/index.ts
@@ -20,7 +21,7 @@ npm run preview                # build and preview the vinext Worker locally
 npm run cf-typegen             # regenerate cloudflare-env.d.ts from wrangler.jsonc
 ```
 
-There is no test script in `package.json`; the checks under `tests/` are `node:test` files run with `node --test tests/*.test.mjs` (pass the glob — on Node 24 a bare `tests/` is read as a module path). They must not need Workers bindings, so anything that reaches D1 or R2 belongs in a script under `scripts/` run against `npm run dev` instead.
+`npm test` runs the `node:test` files under `tests/` (`node --test tests/*.test.mjs` — pass the glob; on Node 24 a bare `tests/` is read as a module path). Many bundle sources with esbuild first; keep esbuild path filters separator-agnostic (`[\/]`) so they also match on Windows, and close SQLite handles before removing temp directories. They must not need Workers bindings, so anything that reaches D1 or R2 belongs in a script under `scripts/` run against `npm run dev` instead.
 
 `next.config.ts` sets `typescript.ignoreBuildErrors: true` and `tsconfig.json` sets `noImplicitAny: false`, so the build will not catch type errors. Run `npx tsc --noEmit` if you want real type checking.
 
@@ -36,7 +37,9 @@ Next.js App Router APIs running on Cloudflare Workers via vinext. Drizzle ORM ov
 
 - **`fetch`** — intercepts `/api/realtime` for the WebSocket upgrade (authenticates the session cookie, then routes to `env.REALTIME.getByName(user.id)`), delegating everything else to vinext.
 - **`email`** — the Cloudflare Email Routing handler. Resolves domain routing rules first (`resolveIncomingMail` in `src/lib/email/incoming.ts`) because `message.setReject()` and `message.forward()` only exist here, then applies optional account-level forwarding (loop-guarded by the `MAILFLARE_FORWARDED_HEADER`), writes raw MIME to R2, and enqueues to `INBOUND_QUEUE`. It never parses mail inline.
-- **`queue`** — a single consumer for both queues; `isInboundQueueMessage` and `isWebhookRetryMessage` in `worker-utils.ts` discriminate inbound mail, webhook retries, and outbound payloads. Failures `retry({ delaySeconds: 10 })`.
+- **`queue`** — a single consumer for every queue: `dispatchQueueMessage` in `worker-utils.ts` routes inbound mail, agent drafts, webhook retries and scheduled sends by shape and throws on anything else. Failures `retry({ delaySeconds: 10 })`. The Node runtime's in-process queues use the same function.
+- **`scheduled`** — `runMaintenance(env, now, daily)` in `worker-utils.ts`; the 5-minute cron runs upkeep and the 02:00 UTC cron adds the daily jobs. `server/runtime/scheduler.ts` fires the same function on the same 5-minute grid.
+- Before any route runs, `fetch` (and the Node server) rejects a state-changing `/api/` request authenticated by the session cookie that comes from another site (`rejectsCrossSiteSessionMutation` in `src/lib/auth/origin.ts`). Requests without the cookie — provider webhooks, API keys, the app's own Bearer-token fetches — are left to the route.
 
 It also re-exports `RealtimeHub`, which must remain exported from the Worker entrypoint.
 
@@ -44,7 +47,7 @@ It also re-exports `RealtimeHub`, which must remain exported from the Worker ent
 
 Inbound: `email` handler → R2 → queue → `processInboundMessage` (`src/lib/email/inbound.ts`) → `resolveInboundAddress` routing decision (deliver / reject / forward) → `parseRawMime` (postal-mime) → insert message + attachments → upsert contacts → `dispatchWebhooks` → `notifyUsersOfNewMessage` over the Durable Object.
 
-Outbound: `src/lib/email/send.ts` / `sender.ts`, composing with mimetext and sending through the `EMAIL` send_email binding, with `outbound_jobs` rows tracking queued sends. `to`, `cc` and `bcc` accept a header string or an array; `toAddr`/`ccAddr`/`bccAddr` on `messages` store the full comma-joined lists (use `splitEmailAddressList` from `src/lib/email/address.ts`, not `getEmailAddress`, when a value may be a list).
+Outbound: `src/lib/email/send.ts` / `sender.ts`, building the MIME in `send.ts` and sending through the `EMAIL` send_email binding, with `outbound_jobs` rows tracking queued sends. `to`, `cc` and `bcc` accept a header string or an array; `toAddr`/`ccAddr`/`bccAddr` on `messages` store the full comma-joined lists (use `splitEmailAddressList` from `src/lib/email/address.ts`, not `getEmailAddress`, when a value may be a list).
 
 Composer: `src/components/compose/rich-text-editor.tsx` is a contentEditable HTML editor; the body is one HTML string and the text/plain part is derived with `htmlToPlainText` (`rich-text-utils.ts`). Quoted/forwarded content is wrapped by `wrapQuotedHtml` and folded by both the composer and the reader (`splitQuotedHtml`). Forward copies the source's attachments onto the draft (`copyMessageAttachments`); `/api/send` with `draftId` sends them.
 
@@ -83,7 +86,7 @@ Auth is `CF_TOKEN` (preferred) or the legacy `CF_EMAIL` + `CF_API_KEY` pair.
 
 ### Schema and the dual-migration gotcha
 
-Schema lives in one file: `src/db/schema/index.ts` (21 tables). Migrations are generated into `drizzle/migrations/`. Note that `drizzle-kit generate` currently prompts interactively about a snapshot rename conflict, so recent migrations were hand-written to match the generated style.
+Schema lives in one file: `src/db/schema/index.ts` (44 tables). Migrations are generated into `drizzle/migrations/`. Note that `drizzle-kit generate` currently prompts interactively about a snapshot rename conflict, so recent migrations were hand-written to match the generated style.
 
 `npm run db:bundle` packages the SQL files for the Worker. `/api/setup/prepare` and the admin migration endpoint use the shared runner in `src/lib/migrations/service.ts`; migration files remain the only schema history to maintain. Build, deploy, preview, and development scripts generate the bundle before loading application code.
 
@@ -119,7 +122,7 @@ The app reaches every platform service through `getEnv()` (`src/lib/cloudflare.t
 
 Two independent auth surfaces:
 
-- **Session cookie** (`ep_session`) — `getCurrentUser` / `requireUser` in `src/lib/auth/cookies.ts`, backed by `src/lib/auth/session.ts`. Used by dashboard/admin API routes. `requireUser` *throws*, which Next surfaces as a 500; prefer `requireSessionUser` from `src/lib/api/auth.ts`, which returns a proper 401 response. Most older routes still use `requireUser` and 500 on unauthenticated requests.
+- **Session cookie** (`ep_session`) — `getCurrentUser` / `requireUser` in `src/lib/auth/cookies.ts`, backed by `src/lib/auth/session.ts`. Used by dashboard/admin API routes. `requireUser` *throws*, which Next surfaces as a 500, so route handlers use `requireSessionUser` from `src/lib/api/auth.ts`, which returns a proper 401 response; `requireUser` is for server components only.
 - **API key bearer token** — `authenticateApiKey` + `requireScope` in `src/lib/api/auth.ts`, used by the public `/api/v1/*` surface.
 
 Mailbox authorization is separate from user role and goes through `src/lib/mailboxes/access.ts` (`getMailboxAccessLevel`, `listAccessibleMailboxes`, `listAccessibleMailboxIds`), which accounts for ownership, the `mailbox_access` sharing table, and admin role. Message queries scope by accessible mailbox IDs, not by `userId` — see `src/app/api/messages/route.ts` for the canonical pattern.
@@ -139,9 +142,10 @@ The admin overview dispatches `deploy-update.yml` (constant in `src/app/api/admi
 ## Conventions
 
 - Tabs for indentation. `@/*` maps to `src/*`.
-- Types and pure helpers are split out of components and modules into sibling `*-types.d.ts` and `*-utils.ts` files (41 and 27 of them respectively). Follow this when adding anything non-trivial.
+- Types and pure helpers are split out of components and modules into sibling `*-types.d.ts` and `*-utils.ts` files (about 240 and 165 of them respectively). Follow this when adding anything non-trivial.
 - Server code reaches bindings through `getEnv()` / `getEnvAsync()` in `src/lib/cloudflare.ts`, then `getDb(env)` from `src/db`. Keep binding access centralized here.
-- API routes return `NextResponse.json({ error: "..." }, { status })` for failures; there is no shared error envelope helper.
+- API routes return `{ error: string }` for failures — `jsonError`, `validationError` (zod issues → readable message plus `issues`) and `readJson` (malformed JSON → 400, oversized → 413) live in `src/lib/api/responses.ts`. Never put a zod object in `error`: clients render it as text.
+- Confirmations use `useConfirm()` from `src/components/shared/confirm-dialog.tsx` (an awaitable dialog), never `window.confirm`.
 - UI is Tailwind v4 + our own primitives in `src/components/ui/` (modelled on xnetwork's `@vcore/layouts`; no Radix, no cva). Feature code never renders raw `button`/`input`/`select`/`textarea`/`label` — lint (`react/forbid-elements` in `lint.config.ts`) enforces it everywhere except `src/components/ui/**`; layout tags (`div`, `span`, `p`, `h*`, lists, `img`, external `a`) stay allowed. Use `Button variant="unstyled"` and `Input`/`Textarea variant="bare"` for bespoke controls instead of a raw element.
 - Behavioral components take data, not compound parts: `Dialog`/`Sheet`/`AlertDialog` (`open`, `onOpenChange`, `title`, `description`, `footer`, `onSubmit` wraps body and footer in a form), `DropdownMenu` (`trigger` + `items` of actions, `checked` rows, `{ kind: "label" }` rows and nested `items` groups), `Select` (`options`, `onValueChange`), `Tabs`/`Segmented`/`RadioGroup` (`items`/`options`), `Card` (`title`, `description`, `actions`, `footer`, `variant`). Overlay internals (portal, focus trap, scroll lock, positioning, dismissal) live in `src/components/ui/internal/`. Dialog bodies scroll inside a viewport-high panel, so tall dialogs need no extra classes.
 - Cross-page patterns live in `src/components/shared/`: `PageHeader`, `EmptyState`, `SearchInput`, `RowTools`. Use them instead of restating the page-title or empty-list markup.

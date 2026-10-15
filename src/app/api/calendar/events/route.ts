@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { getDb } from "@/db";
 import { calendarEvents } from "@/db/schema";
 import { getEnv } from "@/lib/cloudflare";
+import { readJson } from "@/lib/api/responses";
 import { newId } from "@/lib/ids";
 import { sendEmail } from "@/lib/email/send";
 import { createCalendarInvitation } from "@/lib/calendar/utils";
@@ -27,7 +28,9 @@ export async function POST(request: Request) {
 	const env = getEnv();
 	const { user, key, error } = await authorizeCalendarRequest(env, request, "calendar:write");
 	if (error) return error;
-	const input = await request.json() as CalendarEventInput;
+	const body = await readJson<CalendarEventInput>(request);
+	if (body.error) return body.error;
+	const input = (body.data ?? {}) as CalendarEventInput;
 	const startsAt = new Date(input.startsAt);
 	const endsAt = new Date(input.endsAt);
 	if (!input.title?.trim() || Number.isNaN(startsAt.getTime()) || Number.isNaN(endsAt.getTime()) || endsAt <= startsAt) return NextResponse.json({ error: "Enter a title and valid event times" }, { status: 400 });

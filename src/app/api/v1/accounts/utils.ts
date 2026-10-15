@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { validationError } from "@/lib/api/responses";
 import { eq, or } from "drizzle-orm";
 import { getEnv } from "@/lib/cloudflare";
 import { getDb } from "@/db";
@@ -24,7 +25,7 @@ export async function POST(request: Request) {
 	if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 	if (!(await canManageAdminAccounts(env))) return NextResponse.json({ error: "A Pro or Team license is required to manage accounts" }, { status: 403 });
 	const parsed = createUserAccountSchema.safeParse(await request.json().catch(() => null));
-	if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
+	if (!parsed.success) return validationError(parsed.error);
 	if (parsed.data.role === "admin" && !isPrimaryAdmin(auth.user)) {
 		return NextResponse.json({ error: "Only the primary admin can create admin accounts" }, { status: 403 });
 	}

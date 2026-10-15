@@ -4,12 +4,14 @@ import { NextResponse } from "next/server";
 import { getDb } from "@/db";
 import { auditLogs, domains, mailboxes, users } from "@/db/schema";
 import { assertPrimaryAdmin } from "@/lib/auth/admin";
-import { requireUser } from "@/lib/auth/cookies";
+import { requireSessionUser } from "@/lib/api/auth";
 import { getEnv } from "@/lib/cloudflare";
 
 export async function GET(request: Request) {
 	const env = getEnv();
-	const admin = await requireUser(env, request);
+	const session = await requireSessionUser(env, request);
+	if (session.error) return session.error;
+	const admin = session.user;
 	try {
 		assertPrimaryAdmin(admin);
 	} catch {

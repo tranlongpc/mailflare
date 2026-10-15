@@ -3,13 +3,10 @@ import { join, resolve } from "node:path";
 import { parse } from "node:url";
 import next from "next";
 import { WebSocketServer } from "ws";
+import { rejectsCrossSiteSessionMutation } from "@/lib/auth/origin";
 import { getUserFromSession } from "@/lib/auth/session";
 import { getSessionTokenFromRequest } from "@/lib/realtime/utils";
-import { processInboundMessage } from "@/lib/email/inbound";
-import { processAgentDraftJob } from "@/lib/agent/jobs/utils";
-import { processOutboundQueue, type OutboundQueueMessage } from "@/lib/email/send";
-import { processWebhookRetry, type WebhookRetryMessage } from "@/lib/email/webhooks";
-import { isInboundQueueMessage, isWebhookRetryMessage } from "../worker-utils";
+import { dispatchQueueMessage } from "../worker-utils";
 import { createNodeRuntime } from "./runtime/env";
 import { applyMigrations } from "./runtime/migrate";
 import { startScheduler } from "./runtime/scheduler";
@@ -31,22 +28,25 @@ async function main() {
 	const migrated = await applyMigrations(runtime.database, resolve(process.env.MIGRATIONS_DIR ?? join(process.cwd(), "drizzle", "migrations")));
 	if (migrated.length) console.log(`Applied ${migrated.length} migration(s): ${migrated.join(", ")}`);
 
-	runtime.inboundQueue.setConsumer(async (body) => {
-		if (isInboundQueueMessage(body)) await processInboundMessage(env, body);
-	});
-	runtime.outboundQueue.setConsumer(async (body) => {
-		if (isWebhookRetryMessage(body)) await processWebhookRetry(env, body as WebhookRetryMessage);
-		else await processOutboundQueue(env, body as OutboundQueueMessage);
-	});
-	runtime.agentQueue.setConsumer(async (body) => {
-		if (typeof body === "object" && body !== null && (body as { kind?: unknown }).kind === "agent.draft" && typeof (body as { jobId?: unknown }).jobId === "string") await processAgentDraftJob(env, (body as { jobId: string }).jobId);
-	});
+	for (const queue of [runtime.inboundQueue, runtime.outboundQueue, runtime.agentQueue]) {
+		queue.setConsumer((body) => dispatchQueueMessage(env, body));
+	}
 
 	const app = next({ dev, dir: process.cwd(), hostname: host, port });
 	const handle = app.getRequestHandler();
 	await app.prepare();
 
 	const server = createServer((request, response) => {
+		const protocol = String(request.headers["x-forwarded-proto"] ?? "http").split(",")[0].trim();
+		const url = new URL(request.url ?? "/", `${protocol}://${request.headers.host ?? "localhost"}`);
+		const header = (name: string) => {
+			const value = request.headers[name.toLowerCase()];
+			return Array.isArray(value) ? value.join(", ") : (value ?? null);
+		};
+		if (rejectsCrossSiteSessionMutation({ method: request.method ?? "GET", url, header })) {
+			response.writeHead(403, { "Content-Type": "application/json" }).end(JSON.stringify({ error: "Cross-site request rejected" }));
+			return;
+		}
 		void handle(request, response, parse(request.url ?? "/", true));
 	});
 

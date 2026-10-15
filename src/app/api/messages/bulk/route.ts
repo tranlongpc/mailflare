@@ -4,6 +4,7 @@ import { getDb } from "@/db";
 import { folders, messages } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth/cookies";
 import { getEnv } from "@/lib/cloudflare";
+import { readJson } from "@/lib/api/responses";
 import { getMailboxAccessLevel } from "@/lib/mailboxes/access";
 import { createAuditLog } from "@/lib/mailboxes/audit";
 import { permanentlyDeleteMessages } from "@/lib/email/permanent-delete";
@@ -23,7 +24,9 @@ export async function POST(request: Request) {
 		return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 	}
 
-	const payload = (await request.json()) as BulkMessagePayload;
+	const body = await readJson<BulkMessagePayload>(request);
+	if (body.error) return body.error;
+	const payload = (body.data ?? {}) as BulkMessagePayload;
 	const messageIds = payload.messageIds?.filter(Boolean) ?? [];
 	if (messageIds.length === 0 || !isAllowedBulkMessageAction(payload.action)) {
 		return NextResponse.json({ error: "Invalid bulk message action" }, { status: 400 });
@@ -68,15 +71,20 @@ export async function POST(request: Request) {
 
 	const selectedMessages = await db.select().from(messages).where(inArray(messages.id, messageIds));
 	const allowedMessageIds: string[] = [];
+	let supervisedOnly = false;
 
 	for (const message of selectedMessages) {
 		if (!message.mailboxId) continue;
 		const access = await getMailboxAccessLevel(db, user, message.mailboxId);
-		const canUpdate = payload.action === "read" || payload.action === "unread" ? access?.canRead : access?.canManage;
+		const readState = payload.action === "read" || payload.action === "unread";
+		// Opening mail in a supervised mailbox marks it read; that must not reach the owner, so it is accepted and dropped.
+		if (readState && access?.supervised) { supervisedOnly = true; continue; }
+		const canUpdate = readState ? access?.canRead : access?.canManage;
 		if (!canUpdate) continue;
 		allowedMessageIds.push(message.id);
 	}
 
+	if (allowedMessageIds.length === 0 && supervisedOnly) return NextResponse.json({ ok: true });
 	if (allowedMessageIds.length === 0) {
 		return NextResponse.json({ error: "No accessible messages" }, { status: 404 });
 	}

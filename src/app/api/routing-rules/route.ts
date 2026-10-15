@@ -1,16 +1,19 @@
 import { NextResponse } from "next/server";
+import { readJson, validationError } from "@/lib/api/responses";
 import { and, eq } from "drizzle-orm";
 import { getEnv } from "@/lib/cloudflare";
 import { getDb } from "@/db";
 import { folders, routingRules } from "@/db/schema";
-import { requireUser } from "@/lib/auth/cookies";
+import { requireSessionUser } from "@/lib/api/auth";
 import { newId } from "@/lib/ids";
 import { getMailboxAccessLevel } from "@/lib/mailboxes/access";
 import { routingRuleSchema } from "@/lib/validators";
 
 export async function GET(request: Request) {
 	const env = getEnv();
-	const user = await requireUser(env, request);
+	const session = await requireSessionUser(env, request);
+	if (session.error) return session.error;
+	const user = session.user;
 	const url = new URL(request.url);
 	const mailboxId = url.searchParams.get("mailboxId");
 	if (!mailboxId) {
@@ -32,11 +35,13 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
 	const env = getEnv();
-	const user = await requireUser(env, request);
-	const parsed = routingRuleSchema.safeParse(await request.json());
-	if (!parsed.success) {
-		return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
-	}
+	const session = await requireSessionUser(env, request);
+	if (session.error) return session.error;
+	const user = session.user;
+	const body = await readJson<unknown>(request);
+	if (body.error) return body.error;
+	const parsed = routingRuleSchema.safeParse(body.data);
+	if (!parsed.success) return validationError(parsed.error);
 
 	const db = getDb(env);
 	const access = await getMailboxAccessLevel(db, user, parsed.data.mailboxId);

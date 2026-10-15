@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Menu, TextAlignJustify } from "lucide-react";
+import { TextAlignJustify } from "lucide-react";
 import { useBranding } from "./branding-provider";
 import { useSidebar } from "./sidebar-state";
 import type { SidebarHeaderProps } from "./sidebar-state-types";

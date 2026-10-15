@@ -1,8 +1,9 @@
 import { and, eq, ne } from "drizzle-orm";
 import { NextResponse } from "next/server";
+import { readJson } from "@/lib/api/responses";
 import { getDb } from "@/db";
 import { domains, mailboxAliases, mailboxes } from "@/db/schema";
-import { requireUser } from "@/lib/auth/cookies";
+import { requireSessionUser } from "@/lib/api/auth";
 import { getEnv } from "@/lib/cloudflare";
 import { deleteEmailRoutingRuleForAddress, ensureEmailRoutingRuleToWorker } from "@/lib/cloudflare-api";
 import { newId } from "@/lib/ids";
@@ -12,7 +13,7 @@ import type { MailboxRouteParams } from "../types";
 
 async function getManagedMailbox(
 	db: ReturnType<typeof getDb>,
-	user: Awaited<ReturnType<typeof requireUser>>,
+	user: NonNullable<Awaited<ReturnType<typeof requireSessionUser>>["user"]>,
 	mailboxId: string,
 ) {
 	const access = await getMailboxAccessLevel(db, user, mailboxId);
@@ -51,7 +52,9 @@ function listMailboxAliases(db: ReturnType<typeof getDb>, mailboxId: string) {
 export async function GET(request: Request, { params }: MailboxRouteParams) {
 	const { id } = await params;
 	const env = getEnv();
-	const user = await requireUser(env, request);
+	const session = await requireSessionUser(env, request);
+	if (session.error) return session.error;
+	const user = session.user;
 	const db = getDb(env);
 	const mailbox = await getManagedMailbox(db, user, id);
 	if (!mailbox) return NextResponse.json({ error: "Mailbox not found" }, { status: 404 });
@@ -73,8 +76,12 @@ export async function GET(request: Request, { params }: MailboxRouteParams) {
 export async function POST(request: Request, { params }: MailboxRouteParams) {
 	const { id } = await params;
 	const env = getEnv();
-	const user = await requireUser(env, request);
-	const parsed = createMailboxAliasSchema.safeParse(await request.json());
+	const session = await requireSessionUser(env, request);
+	if (session.error) return session.error;
+	const user = session.user;
+	const body = await readJson<unknown>(request);
+	if (body.error) return body.error;
+	const parsed = createMailboxAliasSchema.safeParse(body.data);
 	if (!parsed.success) {
 		return NextResponse.json({ error: "Enter a valid alias username and domain" }, { status: 400 });
 	}
@@ -148,7 +155,9 @@ export async function POST(request: Request, { params }: MailboxRouteParams) {
 export async function DELETE(request: Request, { params }: MailboxRouteParams) {
 	const { id } = await params;
 	const env = getEnv();
-	const user = await requireUser(env, request);
+	const session = await requireSessionUser(env, request);
+	if (session.error) return session.error;
+	const user = session.user;
 	const aliasId = new URL(request.url).searchParams.get("aliasId");
 	if (!aliasId) return NextResponse.json({ error: "Alias is required" }, { status: 400 });
 

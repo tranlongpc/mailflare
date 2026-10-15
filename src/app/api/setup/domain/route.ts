@@ -5,6 +5,7 @@ import { preflightDomain } from "@/lib/domains/preflight";
 import { getPrimaryDomain } from "@/lib/user";
 import { setupDomainSchema } from "@/lib/validators";
 import { readJsonBody } from "@/lib/http/request";
+import { validationError } from "@/lib/api/responses";
 import { RequestBodyTooLargeError } from "@/lib/http/errors";
 
 export async function POST(request: Request) {
@@ -26,9 +27,7 @@ export async function POST(request: Request) {
 		return NextResponse.json({ error: "Invalid setup request" }, { status });
 	}
 	const parsed = setupDomainSchema.safeParse(body);
-	if (!parsed.success) {
-		return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
-	}
+	if (!parsed.success) return validationError(parsed.error);
 
 	try {
 		return NextResponse.json({ domain: await preflightDomain(env, parsed.data.hostname) });

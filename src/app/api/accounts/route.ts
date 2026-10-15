@@ -5,6 +5,7 @@ import { canManageUsers, isPrimaryAdmin } from "@/lib/auth/admin";
 import { getLicenseEntitlements } from "@/lib/licenses/service";
 import { countUsedAccountSeats } from "@/lib/licenses/seats";
 import { deleteAccounts } from "@/lib/accounts/deletion";
+import { validationError } from "@/lib/api/responses";
 import { createAccountResponse } from "./create";
 import { accountListItemFromUser, listAccountsForAdmin, requireTeamAdmin } from "./utils";
 
@@ -23,9 +24,7 @@ export async function POST(request: Request) {
 	const access = await requireTeamAdmin(request);
 	if (access.error) return access.error;
 	const parsed = createUserAccountSchema.safeParse(await request.json().catch(() => null));
-	if (!parsed.success) {
-		return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
-	}
+	if (!parsed.success) return validationError(parsed.error);
 	const actor = access.user!;
 	if (!canManageUsers(actor)) {
 		return NextResponse.json({ error: "You do not have permission to manage users" }, { status: 403 });

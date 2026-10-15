@@ -1,8 +1,9 @@
 import { and, eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
+import { readJson, validationError } from "@/lib/api/responses";
 import { getDb } from "@/db";
 import { folders, routingRules } from "@/db/schema";
-import { requireUser } from "@/lib/auth/cookies";
+import { requireSessionUser } from "@/lib/api/auth";
 import { getEnv } from "@/lib/cloudflare";
 import { getMailboxAccessLevel } from "@/lib/mailboxes/access";
 import { routingRuleSchema } from "@/lib/validators";
@@ -11,11 +12,13 @@ import type { RoutingRuleRouteParams } from "./types";
 export async function PATCH(request: Request, { params }: RoutingRuleRouteParams) {
 	const { id } = await params;
 	const env = getEnv();
-	const user = await requireUser(env, request);
-	const parsed = routingRuleSchema.safeParse(await request.json());
-	if (!parsed.success) {
-		return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
-	}
+	const session = await requireSessionUser(env, request);
+	if (session.error) return session.error;
+	const user = session.user;
+	const body = await readJson<unknown>(request);
+	if (body.error) return body.error;
+	const parsed = routingRuleSchema.safeParse(body.data);
+	if (!parsed.success) return validationError(parsed.error);
 
 	const db = getDb(env);
 	const [rule] = await db.select().from(routingRules).where(eq(routingRules.id, id)).limit(1);
@@ -64,7 +67,9 @@ export async function PATCH(request: Request, { params }: RoutingRuleRouteParams
 export async function DELETE(request: Request, { params }: RoutingRuleRouteParams) {
 	const { id } = await params;
 	const env = getEnv();
-	const user = await requireUser(env, request);
+	const session = await requireSessionUser(env, request);
+	if (session.error) return session.error;
+	const user = session.user;
 	const db = getDb(env);
 	const [rule] = await db.select().from(routingRules).where(eq(routingRules.id, id)).limit(1);
 	if (!rule?.mailboxId) {

@@ -3,7 +3,7 @@ import { eq, sql } from "drizzle-orm";
 import { getEnv } from "@/lib/cloudflare";
 import { getDb } from "@/db";
 import { agentDraftMetadata, messages } from "@/db/schema";
-import { requireUser } from "@/lib/auth/cookies";
+import { requireSessionUser } from "@/lib/api/auth";
 import { deleteMessageAttachment } from "@/lib/email/attachments";
 import { userOwnsDraft } from "../../../utils";
 
@@ -15,7 +15,9 @@ type DraftAttachmentRouteParams = {
 export async function DELETE(request: Request, { params }: DraftAttachmentRouteParams) {
 	const { id, attachmentId } = await params;
 	const env = getEnv();
-	const user = await requireUser(env, request);
+	const session = await requireSessionUser(env, request);
+	if (session.error) return session.error;
+	const user = session.user;
 	const db = getDb(env);
 	const [draft] = await db.select().from(messages).where(eq(messages.id, id)).limit(1);
 

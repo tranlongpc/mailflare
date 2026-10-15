@@ -1,5 +1,6 @@
 import type { BulkMessageAction } from "@/app/api/messages/bulk/types";
 import { authFetch } from "@/lib/auth/client";
+import type { ConfirmFunction } from "@/components/shared/confirm-dialog-types";
 import { throwIfDeleteSkipped } from "@/lib/messages/permanent-delete-utils";
 import { markMessagesReadInCaches } from "@/hooks/utils";
 import { getEmailAddress, normalizeEmailAddress, splitEmailAddressList } from "@/lib/email/address";
@@ -19,12 +20,9 @@ import type {
 } from "./types";
 import {
   ArchiveIcon,
-  Inbox,
   InboxIcon,
   ShieldAlertIcon,
-  ShieldIcon,
   Trash2Icon,
-  TrashIcon,
 } from "lucide-react";
 
 export function getMessageBackHref(
@@ -61,10 +59,11 @@ export function openUnsubscribeUrl(url: string) {
   window.open(url, "_blank", "noopener,noreferrer");
 }
 
-export function confirmTrashWithoutUnsubscribe() {
-  return window.confirm(
-    "This email does not provide an unsubscribe link. It will be moved to Trash, and future emails from this sender will also be moved to Trash.",
-  );
+export function confirmTrashWithoutUnsubscribe(confirm: ConfirmFunction) {
+  return confirm({
+    title: "This email does not provide an unsubscribe link.",
+    description: "It will be moved to Trash, and future emails from this sender will also be moved to Trash.",
+  });
 }
 
 export async function createTrashSenderRule({

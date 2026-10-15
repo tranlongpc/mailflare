@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireUser } from "@/lib/auth/cookies";
+import { requireSessionUser } from "@/lib/api/auth";
 import { getEnv } from "@/lib/cloudflare";
 import { RequestBodyTooLargeError } from "@/lib/http/errors";
 import { readJsonBody } from "@/lib/http/request";
@@ -9,7 +9,8 @@ import { parseImapFolderListRequest } from "./utils";
 
 export async function POST(request: Request) {
 	const env = getEnv();
-	await requireUser(env, request);
+	const session = await requireSessionUser(env, request);
+	if (session.error) return session.error;
 	let input: ReturnType<typeof parseImapFolderListRequest>;
 	try {
 		const body = await readJsonBody<ImapFolderListRequest>(request, 16 * 1024);

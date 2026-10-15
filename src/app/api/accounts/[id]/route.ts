@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 import { getDb } from "@/db";
 import { users } from "@/db/schema";
 import { updateManagedAccountSchema } from "@/lib/validators";
+import { readJson, validationError } from "@/lib/api/responses";
 import { requireTeamAdmin } from "../utils";
 import { getAccountSeatError } from "@/lib/licenses/seats";
 import { getLicenseEntitlements } from "@/lib/licenses/service";
@@ -62,8 +63,10 @@ export async function PATCH(request: Request, { params }: AccountRouteParams) {
 	if (!actorIsPrimary && (account.role === "admin" || account.isPrimaryAdmin)) {
 		return NextResponse.json({ error: "Only the primary admin can manage admin accounts" }, { status: 403 });
 	}
-	const parsed = updateManagedAccountSchema.safeParse(await request.json());
-	if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
+	const body = await readJson<unknown>(request);
+	if (body.error) return body.error;
+	const parsed = updateManagedAccountSchema.safeParse(body.data);
+	if (!parsed.success) return validationError(parsed.error);
 	if (!actorIsPrimary && parsed.data.role !== account.role) {
 		return NextResponse.json({ error: "Only the primary admin can change roles" }, { status: 403 });
 	}

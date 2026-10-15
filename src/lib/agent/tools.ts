@@ -171,6 +171,7 @@ export async function runEmailTool(context: AgentToolContext, name: EmailToolNam
 		return { draftId: input.draftId, revision: input.expectedRevision, status: "pending_approval", scheduledAt: result.snapshot.scheduledAt, reviewUrl: result.reviewUrl };
 	}
 	if (name === "mark_email_read") {
+		if ((await requireAccess(context)).supervised) throw new Error("This mailbox is view-only");
 		const row = await ownMessage(context, input.emailId as string);
 		if (context.origin === "chat") return { action: name, status: "pending_approval", emailId: row.id, read: input.read, emails: [publicMessage(row)] };
 		await db.update(messages).set({ read: input.read as boolean }).where(eq(messages.id, row.id));

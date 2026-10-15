@@ -31,6 +31,7 @@ await build({
 			import { createRoot } from "react-dom/client";
 			import { act } from "react";
 			import { LanguageProvider } from "./src/components/language-provider";
+			import { ConfirmProvider } from "./src/components/shared/confirm-dialog";
 			import Panel from "./src/app/(admin)/domains/AwsCredentialsPanel";
 			import { ApiError, requestJson } from "./src/app/(admin)/domains/api";
 			export { ApiError, requestJson };
@@ -42,7 +43,7 @@ await build({
 				document.body.appendChild(container);
 				const root = createRoot(container);
 				await act(async () => {
-					root.render(createElement(LanguageProvider, { initialLocale: "en" }, createElement(Panel, { need: "sending" })));
+					root.render(createElement(LanguageProvider, { initialLocale: "en" }, createElement(ConfirmProvider, null, createElement(Panel, { need: "sending" }))));
 				});
 				return async function fillAndSave() {
 					const inputs = container.querySelectorAll("input");

@@ -1,6 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import type { AppDatabase } from "@/db";
-import { domains, mailboxAccess, mailboxes } from "@/db/schema";
+import { domains, mailboxAccess, mailboxes, mailboxSupervisors } from "@/db/schema";
 import type { SessionUser } from "@/lib/auth/types";
 import { isTeamMailboxSharingEnabled } from "./access-utils";
 import type { MailboxAccessLevel, MailboxPermission } from "./types";
@@ -26,16 +26,26 @@ export async function getMailboxAccessLevel(
 
 	const isOwner = mailbox.userId === user.id;
 	if (isOwner) return buildAccess(mailbox, "full_access", true);
-	if (mailbox.type !== "shared" || !(await isTeamMailboxSharingEnabled(db))) return null;
+	if (mailbox.type === "shared" && (await isTeamMailboxSharingEnabled(db))) {
+		const [delegatedAccess] = await db
+			.select({ permission: mailboxAccess.permission })
+			.from(mailboxAccess)
+			.where(and(eq(mailboxAccess.mailboxId, mailbox.id), eq(mailboxAccess.userId, user.id)))
+			.limit(1);
+		if (delegatedAccess) return buildAccess(mailbox, delegatedAccess.permission, false);
+	}
 
-	const [delegatedAccess] = await db
-		.select({ permission: mailboxAccess.permission })
-		.from(mailboxAccess)
-		.where(and(eq(mailboxAccess.mailboxId, mailbox.id), eq(mailboxAccess.userId, user.id)))
-		.limit(1);
-	if (delegatedAccess) return buildAccess(mailbox, delegatedAccess.permission, false);
-
+	if (await isMailboxSupervisor(db, mailbox.id, user.id)) return buildAccess(mailbox, "read_only", false, true);
 	return null;
+}
+
+export async function isMailboxSupervisor(db: AppDatabase, mailboxId: string, userId: string): Promise<boolean> {
+	const [row] = await db
+		.select({ id: mailboxSupervisors.id })
+		.from(mailboxSupervisors)
+		.where(and(eq(mailboxSupervisors.mailboxId, mailboxId), eq(mailboxSupervisors.supervisorUserId, userId)))
+		.limit(1);
+	return !!row;
 }
 
 export async function listAccessibleMailboxes(db: AppDatabase, user: Pick<SessionUser, "id" | "email" | "role">) {
@@ -68,10 +78,12 @@ export async function listAccessibleMailboxes(db: AppDatabase, user: Pick<Sessio
 				hasAvatar: !!avatarKey,
 				permission: "full_access" as MailboxPermission,
 				isPrimary: `${row.localPart}@${row.hostname}` === user.email,
+				supervised: false,
 			};
 		});
 
-	if (!(await isTeamMailboxSharingEnabled(db))) return owned;
+	const supervised = await listSupervisedMailboxes(db, user.id);
+	if (!(await isTeamMailboxSharingEnabled(db))) return withSupervised([...owned], supervised);
 	const sharedRows = await db
 		.select({
 			id: mailboxes.id,
@@ -107,10 +119,48 @@ export async function listAccessibleMailboxes(db: AppDatabase, user: Pick<Sessio
 			...mailbox,
 			hasAvatar: !!avatarKey,
 			isPrimary: false,
+			supervised: false,
 		};
 	});
 
-	return [...owned, ...shared];
+	return withSupervised([...owned, ...shared], supervised);
+}
+
+type AccessibleMailbox = Awaited<ReturnType<typeof listSupervisedMailboxes>>[number];
+
+/** Supervised mailboxes the user does not already reach as owner or member. */
+function withSupervised<T extends { id: string }>(rows: T[], supervised: AccessibleMailbox[]): (T | AccessibleMailbox)[] {
+	const seen = new Set(rows.map((row) => row.id));
+	return [...rows, ...supervised.filter((row) => !seen.has(row.id))];
+}
+
+async function listSupervisedMailboxes(db: AppDatabase, userId: string) {
+	const rows = await db
+		.select({
+			id: mailboxes.id,
+			userId: mailboxes.userId,
+			domainId: mailboxes.domainId,
+			localPart: mailboxes.localPart,
+			displayName: mailboxes.displayName,
+			signature: mailboxes.signature,
+			autoReplyEnabled: mailboxes.autoReplyEnabled,
+			autoReplySubject: mailboxes.autoReplySubject,
+			autoReplyBody: mailboxes.autoReplyBody,
+			useAllDomains: mailboxes.useAllDomains,
+			avatarKey: mailboxes.avatarKey,
+			type: mailboxes.type,
+			disabled: mailboxes.disabled,
+			createdAt: mailboxes.createdAt,
+			hostname: domains.hostname,
+		})
+		.from(mailboxSupervisors)
+		.innerJoin(mailboxes, eq(mailboxSupervisors.mailboxId, mailboxes.id))
+		.innerJoin(domains, eq(mailboxes.domainId, domains.id))
+		.where(and(eq(mailboxSupervisors.supervisorUserId, userId), eq(mailboxes.disabled, false)));
+	return rows.map((row) => {
+		const { avatarKey, ...mailbox } = row;
+		return { ...mailbox, hasAvatar: !!avatarKey, permission: "read_only" as MailboxPermission, isPrimary: false, supervised: true };
+	});
 }
 
 export async function listAccessibleMailboxIds(db: AppDatabase, user: Pick<SessionUser, "id" | "email" | "role">) {
@@ -122,11 +172,13 @@ function buildAccess(
 	mailbox: MailboxAccessLevel["mailbox"],
 	permission: MailboxPermission,
 	isOwner: boolean,
+	supervised = false,
 ): MailboxAccessLevel {
 	return {
 		mailbox,
 		permission,
 		isOwner,
+		supervised,
 		canRead: hasMailboxPermission(permission, "read_only"),
 		canSendAs: hasMailboxPermission(permission, "send_as"),
 		canSendOnBehalf: hasMailboxPermission(permission, "send_on_behalf"),

@@ -85,6 +85,8 @@ export async function markMessageAsReadForUser(env: CloudflareEnv, user: Session
 	if (!message?.mailboxId) return false;
 	const access = await getMailboxAccessLevel(db, user, message.mailboxId);
 	if (!access?.canRead) return false;
+	// A supervisor's view must leave the owner's unread mail unread, and leave no audit trail the owner could see.
+	if (access.supervised) return true;
 	await db.update(messages).set({ read: true }).where(eq(messages.id, messageId));
 	await createAuditLog(env, {
 		actorUserId: user.id,

@@ -7,6 +7,7 @@ import clsx from "clsx";
 import { CalendarDays, Check, Clock3, Copy, ExternalLink, MapPin, MoreHorizontal, Plus } from "lucide-react";
 import toast, { Toaster } from "react-hot-toast";
 import { useLanguage } from "@/components/language-provider";
+import { useConfirm } from "@/components/shared/confirm-dialog";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu } from "@/components/ui/dropdown-menu";
 import { RouteLoadingBarPortal } from "@/components/route-loading-bar-portal";
@@ -22,6 +23,7 @@ import { availabilityLabel, durationLabel, emptyBookingForm, formFromEvent } fro
 
 export default function BookingsPage() {
 	const { t } = useLanguage();
+	const confirm = useConfirm();
 	const { minimal: sidebarMinimal, mobile } = useSidebar();
 	const minimal = sidebarMinimal || mobile;
 	const [events, setEvents] = useState<BookingEvent[]>([]);
@@ -96,7 +98,7 @@ export default function BookingsPage() {
 	}
 
 	async function remove(event: BookingEvent) {
-		if (!window.confirm(t("booking.deleteConfirm", { name: event.name }))) return;
+		if (!(await confirm({ title: t("booking.deleteConfirm", { name: event.name }), confirmLabel: t("common.delete"), destructive: true }))) return;
 		try {
 			const response = await authFetch(`/api/booking/${event.id}`, { method: "DELETE" });
 			if (!response.ok) throw new Error();

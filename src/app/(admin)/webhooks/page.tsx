@@ -5,6 +5,7 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Activity, Plus, RefreshCw, Send, Trash2 } from "lucide-react";
 import { useLanguage } from "@/components/language-provider";
+import { useConfirm } from "@/components/shared/confirm-dialog";
 import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
@@ -28,6 +29,7 @@ import { WebhookDeliveries } from "./deliveries";
 
 export default function WebhooksPage() {
 	const { t } = useLanguage();
+	const confirm = useConfirm();
 	const qc = useQueryClient();
 	const [dialogOpen, setDialogOpen] = useState(false);
 	const [url, setUrl] = useState("");
@@ -206,8 +208,8 @@ export default function WebhooksPage() {
 									<Button
 										variant="ghost"
 										size="sm"
-										onClick={() => {
-											if (window.confirm(t("webhooks.rotateConfirm"))) rotate.mutate(hook.id);
+										onClick={async () => {
+											if (await confirm({ title: t("webhooks.rotateConfirm"), confirmLabel: t("webhooks.rotate"), destructive: true })) rotate.mutate(hook.id);
 										}}
 										disabled={rotate.isPending}
 									>

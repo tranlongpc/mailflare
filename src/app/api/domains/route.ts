@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { readJson, validationError } from "@/lib/api/responses";
 import { getEnv } from "@/lib/cloudflare";
-import { requireUser } from "@/lib/auth/cookies";
+import { requireSessionUser } from "@/lib/api/auth";
 import { canManageDomains } from "@/lib/auth/admin";
 import { addDomainSchema } from "@/lib/validators";
 import { addDomainForUser, listUserDomains } from "@/lib/domains/service";
@@ -11,7 +12,9 @@ import { hasValidSessionMutationOrigin } from "@/lib/auth/origin";
 
 export async function GET(request: NextRequest) {
 	const env = getEnv();
-	const user = await requireUser(env, request);
+	const session = await requireSessionUser(env, request);
+	if (session.error) return session.error;
+	const user = session.user;
 	const domainOwnerId = user.canManageMailboxes && user.createdByUserId ? user.createdByUserId : user.id;
 	const domains = await listUserDomains(env, domainOwnerId);
 
@@ -44,13 +47,15 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: Request) {
 	const env = getEnv();
-	const user = await requireUser(env, request);
+	const session = await requireSessionUser(env, request);
+	if (session.error) return session.error;
+	const user = session.user;
 	if (!canManageDomains(user)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 	if (!hasValidSessionMutationOrigin(request)) return NextResponse.json({ error: "Invalid origin" }, { status: 403 });
-	const parsed = addDomainSchema.safeParse(await request.json());
-	if (!parsed.success) {
-		return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
-	}
+	const body = await readJson<unknown>(request);
+	if (body.error) return body.error;
+	const parsed = addDomainSchema.safeParse(body.data);
+	if (!parsed.success) return validationError(parsed.error);
 
 	try {
 		const result = await addDomainForUser(env, user.id, parsed.data.hostname, {

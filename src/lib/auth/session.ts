@@ -2,8 +2,9 @@ import { and, eq, gt, ne } from "drizzle-orm";
 import { newId } from "@/lib/ids";
 import { getDb } from "@/db";
 import { sessions, users } from "@/db/schema";
+import { SESSION_COOKIE } from "./session-cookie";
 
-export const SESSION_COOKIE = "ep_session";
+export { SESSION_COOKIE };
 const SESSION_DAYS = 30;
 
 export function generateSessionToken(): string {

@@ -390,6 +390,7 @@
 	"common.saving": "Saving...",
 	"common.name": "Name",
 	"common.cancel": "Cancel",
+	"common.confirm": "Confirm",
 	"navigation.back": "Back",
 	"common.search": "Search",
 	"common.noResults": "No results",

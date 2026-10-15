@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { readJson, validationError } from "@/lib/api/responses";
 import { getDb } from "@/db";
 import { routingRules } from "@/db/schema";
 import { requireSessionUser } from "@/lib/api/auth";
@@ -47,10 +48,10 @@ export async function POST(request: Request) {
 	const auth = await requireSessionUser(env, request);
 	if (auth.error) return auth.error;
 	const user = auth.user;
-	const parsed = domainRoutingRuleSchema.safeParse(await request.json());
-	if (!parsed.success) {
-		return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
-	}
+	const body = await readJson<unknown>(request);
+	if (body.error) return body.error;
+	const parsed = domainRoutingRuleSchema.safeParse(body.data);
+	if (!parsed.success) return validationError(parsed.error);
 
 	const db = getDb(env);
 	const mailboxId = new URL(request.url).searchParams.get("mailboxId");

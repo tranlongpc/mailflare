@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useLanguage } from "@/components/language-provider";
+import { useConfirm } from "@/components/shared/confirm-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { postJson } from "./api";
@@ -17,6 +18,7 @@ type Props = {
 /** The shared Resend API key, used by both the sending and receiving setup. */
 export default function ResendKeyRow({ configured, onChanged, onError }: Props) {
 	const { t } = useLanguage();
+	const confirm = useConfirm();
 	const [apiKey, setApiKey] = useState("");
 	const [editing, setEditing] = useState(false);
 	const [busy, setBusy] = useState(false);
@@ -34,11 +36,13 @@ export default function ResendKeyRow({ configured, onChanged, onError }: Props) 
 		setEditing(false);
 		onChanged(true);
 	});
-	const remove = () => run(async () => {
-		if (!window.confirm(t("resend.removeConfirm"))) return;
-		await postJson("/api/admin/resend-key", "DELETE", {});
-		onChanged(false);
-	});
+	const remove = async () => {
+		if (!(await confirm({ title: t("resend.removeConfirm"), confirmLabel: t("resend.remove"), destructive: true }))) return;
+		await run(async () => {
+			await postJson("/api/admin/resend-key", "DELETE", {});
+			onChanged(false);
+		});
+	};
 
 	return (
 		<>

@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import type { getDb } from "@/db";
 import { domains, mailboxes, users } from "@/db/schema";
 import { assertAdmin } from "@/lib/auth/admin";
-import { requireUser } from "@/lib/auth/cookies";
+import { requireSessionUser } from "@/lib/api/auth";
 import { getLicenseEntitlements } from "@/lib/licenses/service";
 import { getEnv } from "@/lib/cloudflare";
 
@@ -95,8 +95,10 @@ export async function requireTeamSharingAdmin(request: Request) {
 
 export async function requireTeamAdmin(request: Request) {
 	const env = getEnv();
+	const session = await requireSessionUser(env, request);
+	if (session.error) return { env, user: null, error: session.error };
 	try {
-		const user = await requireUser(env, request);
+		const user = session.user;
 		assertAdmin(user);
 		if (!(await getLicenseEntitlements(env)).canManageAccounts) {
 			return {

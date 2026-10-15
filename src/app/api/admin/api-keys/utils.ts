@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { validationError } from "@/lib/api/responses";
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import { getEnv } from "@/lib/cloudflare";
@@ -46,7 +47,7 @@ export async function POST(request: Request) {
 	if (access.error) return access.error;
 	if (!hasValidSessionMutationOrigin(request)) return NextResponse.json({ error: "Invalid origin" }, { status: 403 });
 	const parsed = createKeySchema.safeParse(await request.json().catch(() => null));
-	if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
+	if (!parsed.success) return validationError(parsed.error);
 	const db = getDb(access.env);
 	const { fullKey, prefix, hash } = generateApiKey();
 	const id = newId("key");

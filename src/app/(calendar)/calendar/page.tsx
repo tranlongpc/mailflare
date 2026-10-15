@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import type { DragEvent, PointerEvent as ReactPointerEvent } from "react";
 import { createPortal } from "react-dom";
 import toast, { Toaster } from "react-hot-toast";
-import { AlignLeft, CalendarPlus2, ChevronDown, ChevronLeft, ChevronRight, Clock3, MapPin, MoreVertical, Palette, Plus, Repeat2, Trash2, UsersRound, X } from "lucide-react";
+import { AlignLeft, ChevronDown, ChevronLeft, ChevronRight, Clock3, MapPin, MoreVertical, Palette, Plus, Repeat2, Trash2, UsersRound, X } from "lucide-react";
 import { mobilePrimaryActionClass } from "@/components/page-header-utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,6 +23,7 @@ import { DEFAULT_FOLDER_COLOR, FOLDER_COLOR_OPTIONS } from "@/lib/folders/colors
 import type { TranslationKey } from "@/lib/i18n/types";
 import type { CalendarRepeat } from "@/lib/calendar/types";
 import { useLanguage } from "@/components/language-provider";
+import { useConfirm } from "@/components/shared/confirm-dialog";
 import { folderColorKeys } from "@/lib/folders/color-keys";
 import { useSelectedMailbox } from "@/components/mailbox-provider";
 import { useSidebar } from "@/components/sidebar-state";
@@ -36,12 +37,13 @@ import {
   monthGridDates, PAST_EVENT_COLOR_CLASSES, rescheduleCalendarOccurrence, resizeEventTimes, startOfDay, startOfMonth, startOfWeek, WEEKDAY_OPTIONS,
 } from "./utils";
 import clsx from "clsx";
-import { DialogFrame } from "@/components/dialog-frame";
+import { Dialog } from "@/components/ui/dialog";
 
 const eventFieldClass = "h-9 border-transparent bg-transparent px-2 shadow-none hover:bg-white/60 focus:border-blue-600 focus:bg-white focus:shadow-sm";
 
 export default function CalendarPage() {
   const { t } = useLanguage();
+  const confirm = useConfirm();
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [eventsVersion, setEventsVersion] = useState(0);
@@ -65,7 +67,6 @@ export default function CalendarPage() {
   const [endsAt, setEndsAt] = useState("");
   const [durationOptionsOpen, setDurationOptionsOpen] = useState(false);
   const [adding, setAdding] = useState(false);
-  const [closingEventEditor, setClosingEventEditor] = useState(false);
   const [guests, setGuests] = useState("");
   const [location, setLocation] = useState("");
   const [description, setDescription] = useState("");
@@ -133,6 +134,11 @@ export default function CalendarPage() {
     router.replace("/calendar");
   }, [events, eventFromUrl]);
 
+  function closeEventEditor() {
+    setAdding(false);
+    setEditing(null);
+  }
+
   function openNewEvent(day = visibleDate, startAt?: Date) {
     const start = startAt ? new Date(startAt) : defaultCalendarStart(day);
     setEditing(null);
@@ -146,7 +152,6 @@ export default function CalendarPage() {
     setStartsAt(formatLocalDateTime(start));
     setEndsAt(formatLocalDateTime(new Date(start.getTime() + 60 * 60_000)));
     setDurationOptionsOpen(false);
-    setClosingEventEditor(false);
     setAdding(true);
   }
 
@@ -184,7 +189,7 @@ export default function CalendarPage() {
       });
       if (response.ok) {
         setEventsVersion((version) => version + 1);
-        setClosingEventEditor(true);
+        closeEventEditor();
       } else {
         const result = (await response.json()) as { error?: string };
         toast.error(result.error ?? t("calendar.saveFailed"));
@@ -198,14 +203,14 @@ export default function CalendarPage() {
 
   async function deleteEvent(id: string) {
     const recurring = editing && editing.repeat !== "none";
-    if (!window.confirm(recurring ? t("calendar.deleteFuture") : t("calendar.deleteEvent"))) return;
+    if (!(await confirm({ title: recurring ? t("calendar.deleteFuture") : t("calendar.deleteEvent"), confirmLabel: t("common.delete"), destructive: true }))) return;
     setPendingAction(id);
     try {
       const effectiveFrom = recurring ? new Date().toISOString() : undefined;
       const response = await authFetch(`/api/calendar/events/${id}`, { method: "DELETE", headers: effectiveFrom ? { "Content-Type": "application/json" } : undefined, body: effectiveFrom ? JSON.stringify({ effectiveFrom }) : undefined });
       if (response.ok) {
         setEventsVersion((version) => version + 1);
-        setClosingEventEditor(true);
+        closeEventEditor();
       } else {
         const result = (await response.json()) as { error?: string };
         toast.error(result.error ?? t("calendar.deleteFailed"));
@@ -229,7 +234,6 @@ export default function CalendarPage() {
     setEndsAt(formatLocalDateTime(new Date(event.endsAt)));
     setDurationOptionsOpen(false);
     setGuests(JSON.parse(event.attendees || "[]").join(", "));
-    setClosingEventEditor(false);
     setAdding(true);
   }
 
@@ -493,100 +497,98 @@ export default function CalendarPage() {
         </div>
       </section>
 
-      {adding && (
-        <div className={clsx("dialog-overlay fixed inset-0 z-50 flex items-center justify-center bg-neutral-950/35 p-4", closingEventEditor && "pointer-events-none")} data-state={closingEventEditor ? "closed" : "open"}>
-          <DialogFrame label={editing ? t("calendar.editEvent") : t("calendar.createEvent")} onClose={() => { if (pendingAction !== "save") setClosingEventEditor(true); }} className="dialog-content max-h-[calc(100dvh-2rem)] w-full max-w-xl overflow-y-auto rounded-2xl bg-white p-5 shadow-2xl sm:p-6" data-state={closingEventEditor ? "closed" : "open"}
-            onAnimationEnd={(event) => {
-              if (!closingEventEditor || event.target !== event.currentTarget) return;
-              setAdding(false);
-              setEditing(null);
-              setClosingEventEditor(false);
+      <Dialog
+        open={adding}
+        onOpenChange={(open) => { if (!open && pendingAction !== "save") closeEventEditor(); }}
+        title={editing ? t("calendar.editEvent") : t("calendar.createEvent")}
+        hideTitle
+        showClose={false}
+        className="w-[min(36rem,calc(100vw-2rem))] p-5 sm:p-6"
+        bodyClassName="-mx-5 px-5 sm:-mx-6 sm:px-6"
+      >
+        <div className="flex items-start gap-3">
+          <Input variant="bare" value={title} onChange={(event) => setTitle(event.target.value)} placeholder={t("calendar.addTitle")} aria-label={t("calendar.eventName")}
+            className="min-w-0 flex-1 rounded-md border border-transparent bg-transparent px-2 py-1 text-2xl font-medium text-neutral-900 outline-none placeholder:text-neutral-500 hover:bg-white/60 focus:border-blue-600 focus:bg-white" />
+          <Button variant="unstyled" type="button" aria-label={t("calendar.closeEditor")} disabled={pendingAction === "save"} onClick={closeEventEditor} className="shrink-0 rounded-full p-1 text-neutral-600 hover:bg-neutral-200 disabled:opacity-50"><X className="h-5 w-5" /></Button>
+        </div>
+        <div className="mt-4 space-y-2">
+          <div className="grid grid-cols-[24px_minmax(0,1fr)] items-start gap-3">
+            <Clock3 aria-hidden="true" className="mt-2 h-5 w-5 text-neutral-600" />
+            <div className="min-w-0" onBlur={(event) => {
+              if (!event.currentTarget.contains(event.relatedTarget)) setDurationOptionsOpen(false);
             }}>
-            <div className="flex items-start gap-3">
-              <Input variant="bare" value={title} onChange={(event) => setTitle(event.target.value)} placeholder={t("calendar.addTitle")} aria-label={t("calendar.eventName")}
-                className="min-w-0 flex-1 rounded-md border border-transparent bg-transparent px-2 py-1 text-2xl font-medium text-neutral-900 outline-none placeholder:text-neutral-500 hover:bg-white/60 focus:border-blue-600 focus:bg-white" />
-              <Button variant="unstyled" type="button" aria-label={t("calendar.closeEditor")} disabled={pendingAction === "save"} onClick={() => setClosingEventEditor(true)} className="shrink-0 rounded-full p-1 text-neutral-600 hover:bg-neutral-200 disabled:opacity-50"><X className="h-5 w-5" /></Button>
+              <div className="grid gap-1 sm:grid-cols-[minmax(0,1fr)_1px_minmax(0,1fr)] sm:gap-2">
+                <Label className="relative block min-w-0 text-sm font-normal text-inherit">
+                  <span className="pointer-events-none absolute left-2 top-1/2 z-10 -translate-y-1/2 font-medium text-neutral-500">{t("calendar.from")}</span>
+                  <Input type="datetime-local" value={startsAt} onFocus={() => setDurationOptionsOpen(true)} onChange={(event) => setStartsAt(event.target.value)} aria-label={t("calendar.fromLabel")} className={`${eventFieldClass} pl-14`} />
+                </Label>
+                <div aria-hidden="true" className="h-px w-full self-center bg-neutral-200 sm:h-6 sm:w-px" />
+                <Label className="relative block min-w-0 text-sm font-normal text-inherit">
+                  <span className="pointer-events-none absolute left-2 top-1/2 z-10 -translate-y-1/2 font-medium text-neutral-500">{t("calendar.to")}</span>
+                  <Input type="datetime-local" value={endsAt} onFocus={() => setDurationOptionsOpen(true)} onChange={(event) => setEndsAt(event.target.value)} aria-label={t("calendar.toLabel")} className={`${eventFieldClass} pl-14`} />
+                </Label>
+              </div>
+              {durationOptionsOpen && <div className="flex flex-wrap gap-1 pt-1" aria-label={t("calendar.setDuration")}>
+                {([15, 30, 60, 1440] as const).map((minutes) => ({ minutes, label: t(`calendar.dur.${minutes}`) })).map((preset) => (
+                  <Button key={preset.minutes} type="button" variant="ghost" disabled={!parseUserDateTimeLocal(startsAt)} onClick={() => { setEndsAt(eventEndAfterMinutes(startsAt, preset.minutes)); setDurationOptionsOpen(false); }} className="h-7 rounded-full px-2 text-xs text-neutral-600 hover:bg-neutral-100">
+                    {preset.label}
+                  </Button>
+                ))}
+              </div>}
             </div>
-            <div className="mt-4 space-y-2">
-              <div className="grid grid-cols-[24px_minmax(0,1fr)] items-start gap-3">
-                <Clock3 aria-hidden="true" className="mt-2 h-5 w-5 text-neutral-600" />
-                <div className="min-w-0" onBlur={(event) => {
-                  if (!event.currentTarget.contains(event.relatedTarget)) setDurationOptionsOpen(false);
-                }}>
-                  <div className="grid gap-1 sm:grid-cols-[minmax(0,1fr)_1px_minmax(0,1fr)] sm:gap-2">
-                    <Label className="relative block min-w-0 text-sm font-normal text-inherit">
-                      <span className="pointer-events-none absolute left-2 top-1/2 z-10 -translate-y-1/2 font-medium text-neutral-500">{t("calendar.from")}</span>
-                      <Input type="datetime-local" value={startsAt} onFocus={() => setDurationOptionsOpen(true)} onChange={(event) => setStartsAt(event.target.value)} aria-label={t("calendar.fromLabel")} className={`${eventFieldClass} pl-14`} />
-                    </Label>
-                    <div aria-hidden="true" className="h-px w-full self-center bg-neutral-200 sm:h-6 sm:w-px" />
-                    <Label className="relative block min-w-0 text-sm font-normal text-inherit">
-                      <span className="pointer-events-none absolute left-2 top-1/2 z-10 -translate-y-1/2 font-medium text-neutral-500">{t("calendar.to")}</span>
-                      <Input type="datetime-local" value={endsAt} onFocus={() => setDurationOptionsOpen(true)} onChange={(event) => setEndsAt(event.target.value)} aria-label={t("calendar.toLabel")} className={`${eventFieldClass} pl-14`} />
-                    </Label>
-                  </div>
-                  {durationOptionsOpen && <div className="flex flex-wrap gap-1 pt-1" aria-label={t("calendar.setDuration")}>
-                    {([15, 30, 60, 1440] as const).map((minutes) => ({ minutes, label: t(`calendar.dur.${minutes}`) })).map((preset) => (
-                      <Button key={preset.minutes} type="button" variant="ghost" disabled={!parseUserDateTimeLocal(startsAt)} onClick={() => { setEndsAt(eventEndAfterMinutes(startsAt, preset.minutes)); setDurationOptionsOpen(false); }} className="h-7 rounded-full px-2 text-xs text-neutral-600 hover:bg-neutral-100">
-                        {preset.label}
-                      </Button>
-                    ))}
-                  </div>}
-                </div>
-              </div>
-              <div className="grid grid-cols-[24px_minmax(0,1fr)] items-start gap-3">
-                <Repeat2 aria-hidden="true" className="mt-2 h-5 w-5 text-neutral-600" />
-                <div className="min-w-0">
-                  <Select variant="bare" value={repeat} onValueChange={(value) => setRepeat(value as CalendarRepeat)} aria-label={t("calendar.repeat")}
-                    options={(["none", "daily", "weekly", "monthly", "weekdays"] as const).map((value) => ({ value, label: t(`calendar.repeat.${value}`) }))}
-                    containerClassName="flex h-9 w-full rounded-md border border-transparent hover:bg-neutral-50 focus-within:border-blue-600 focus-within:bg-white" className="pl-2 text-neutral-700" />
-                  {repeat === "weekdays" && (
-                    <div role="group" aria-label={t("calendar.repeatOnWeekdays")} className="flex flex-wrap gap-1.5 px-2 pt-1">
-                      {WEEKDAY_OPTIONS.map((day) => (
-                        <Button variant="unstyled" key={day.value} type="button" aria-label={t("calendar.repeatOn", { day: t(`weekday.${day.value}` as TranslationKey) })} aria-pressed={repeatDays.includes(day.value)}
-                          onClick={() => setRepeatDays((selected) => selected.includes(day.value) ? selected.filter((value) => value !== day.value) : [...selected, day.value].sort((a, b) => a - b))}
-                          className={clsx("rounded-full px-2.5 py-1 text-xs font-medium", repeatDays.includes(day.value) ? "bg-blue-600 text-white" : "bg-neutral-100 text-neutral-600 hover:bg-neutral-200")}>
-                          {t(`calendar.weekdayShort.${day.value}` as TranslationKey)}
-                        </Button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-              <div className="grid grid-cols-[24px_minmax(0,1fr)] items-center gap-3">
-                <UsersRound aria-hidden="true" className="h-5 w-5 text-neutral-600" />
-                <Input value={guests} onChange={(event) => setGuests(event.target.value)} placeholder={t("calendar.addGuests")} aria-label={t("calendar.guestsLabel")} className={eventFieldClass} />
-              </div>
-              <div className="grid grid-cols-[24px_minmax(0,1fr)] items-center gap-3">
-                <MapPin aria-hidden="true" className="h-5 w-5 text-neutral-600" />
-                <Input value={location} onChange={(event) => setLocation(event.target.value)} placeholder={t("calendar.addLocation")} aria-label={t("calendar.location")} className={eventFieldClass} />
-              </div>
-              <div className="grid grid-cols-[24px_minmax(0,1fr)] items-start gap-3">
-                <AlignLeft aria-hidden="true" className="mt-2 h-5 w-5 text-neutral-600" />
-                <Textarea value={description} onChange={(event) => setDescription(event.target.value)} placeholder={t("calendar.addDescription")} aria-label={t("calendar.description")} rows={Math.max(1, description.split("\n").length)} className={clsx("min-h-9 border-transparent bg-transparent px-2 py-2 shadow-none hover:bg-white/60 focus:min-h-24 focus:resize-y focus:border-blue-600 focus:bg-white focus-visible:ring-0", description ? "min-h-24 resize-y" : "resize-none")} />
-              </div>
-              <div className="grid grid-cols-[24px_minmax(0,1fr)] items-center gap-3">
-                <Palette aria-hidden="true" className="h-5 w-5 text-neutral-600" />
-                <div role="radiogroup" aria-label={t("calendar.eventColor")} className="flex flex-wrap items-center gap-1.5 px-2">
-                  {FOLDER_COLOR_OPTIONS.map((option) => (
-                    <Button variant="unstyled" key={option.value} type="button" role="radio" aria-label={t(folderColorKeys[option.value])} title={t(folderColorKeys[option.value])} aria-checked={color === option.value} onClick={() => setColor(option.value)}
-                      className={`h-7 w-7 rounded-full border-2 transition-transform hover:scale-110 ${color === option.value ? "border-neutral-900 ring-2 ring-neutral-300 ring-offset-2" : "border-transparent"}`}
-                      style={{ backgroundColor: option.value }} />
+          </div>
+          <div className="grid grid-cols-[24px_minmax(0,1fr)] items-start gap-3">
+            <Repeat2 aria-hidden="true" className="mt-2 h-5 w-5 text-neutral-600" />
+            <div className="min-w-0">
+              <Select variant="bare" value={repeat} onValueChange={(value) => setRepeat(value as CalendarRepeat)} aria-label={t("calendar.repeat")}
+                options={(["none", "daily", "weekly", "monthly", "weekdays"] as const).map((value) => ({ value, label: t(`calendar.repeat.${value}`) }))}
+                containerClassName="flex h-9 w-full rounded-md border border-transparent hover:bg-neutral-50 focus-within:border-blue-600 focus-within:bg-white" className="pl-2 text-neutral-700" />
+              {repeat === "weekdays" && (
+                <div role="group" aria-label={t("calendar.repeatOnWeekdays")} className="flex flex-wrap gap-1.5 px-2 pt-1">
+                  {WEEKDAY_OPTIONS.map((day) => (
+                    <Button variant="unstyled" key={day.value} type="button" aria-label={t("calendar.repeatOn", { day: t(`weekday.${day.value}` as TranslationKey) })} aria-pressed={repeatDays.includes(day.value)}
+                      onClick={() => setRepeatDays((selected) => selected.includes(day.value) ? selected.filter((value) => value !== day.value) : [...selected, day.value].sort((a, b) => a - b))}
+                      className={clsx("rounded-full px-2.5 py-1 text-xs font-medium", repeatDays.includes(day.value) ? "bg-blue-600 text-white" : "bg-neutral-100 text-neutral-600 hover:bg-neutral-200")}>
+                      {t(`calendar.weekdayShort.${day.value}` as TranslationKey)}
+                    </Button>
                   ))}
                 </div>
-              </div>
-              <div className="grid grid-cols-[24px_minmax(0,1fr)] gap-3 pt-6">
-                <div />
-                <div className="flex justify-between gap-2">
-                  <div>{editing && <Button variant="ghost" disabled={pendingAction !== null} onClick={() => void deleteEvent(editing.id)} className="px-2 text-red-600 hover:bg-red-50"><Trash2 className="h-4 w-4" />{t("common.delete")}</Button>}</div>
-                  <Button onClick={() => void addEvent()} disabled={!title.trim() || !parseUserDateTimeLocal(startsAt) || !parseUserDateTimeLocal(endsAt) || parseUserDateTimeLocal(endsAt)! <= parseUserDateTimeLocal(startsAt)! || (repeat === "weekdays" && repeatDays.length === 0) || pendingAction === "save"} className="rounded-full bg-blue-600 px-6 text-white hover:bg-blue-700">
-                    {pendingAction === "save" ? t("common.saving") : t("settings.autoReply.save")}
-                  </Button>
-                </div>
-              </div>
+              )}
             </div>
-          </DialogFrame>
+          </div>
+          <div className="grid grid-cols-[24px_minmax(0,1fr)] items-center gap-3">
+            <UsersRound aria-hidden="true" className="h-5 w-5 text-neutral-600" />
+            <Input value={guests} onChange={(event) => setGuests(event.target.value)} placeholder={t("calendar.addGuests")} aria-label={t("calendar.guestsLabel")} className={eventFieldClass} />
+          </div>
+          <div className="grid grid-cols-[24px_minmax(0,1fr)] items-center gap-3">
+            <MapPin aria-hidden="true" className="h-5 w-5 text-neutral-600" />
+            <Input value={location} onChange={(event) => setLocation(event.target.value)} placeholder={t("calendar.addLocation")} aria-label={t("calendar.location")} className={eventFieldClass} />
+          </div>
+          <div className="grid grid-cols-[24px_minmax(0,1fr)] items-start gap-3">
+            <AlignLeft aria-hidden="true" className="mt-2 h-5 w-5 text-neutral-600" />
+            <Textarea value={description} onChange={(event) => setDescription(event.target.value)} placeholder={t("calendar.addDescription")} aria-label={t("calendar.description")} rows={Math.max(1, description.split("\n").length)} className={clsx("min-h-9 border-transparent bg-transparent px-2 py-2 shadow-none hover:bg-white/60 focus:min-h-24 focus:resize-y focus:border-blue-600 focus:bg-white focus-visible:ring-0", description ? "min-h-24 resize-y" : "resize-none")} />
+          </div>
+          <div className="grid grid-cols-[24px_minmax(0,1fr)] items-center gap-3">
+            <Palette aria-hidden="true" className="h-5 w-5 text-neutral-600" />
+            <div role="radiogroup" aria-label={t("calendar.eventColor")} className="flex flex-wrap items-center gap-1.5 px-2">
+              {FOLDER_COLOR_OPTIONS.map((option) => (
+                <Button variant="unstyled" key={option.value} type="button" role="radio" aria-label={t(folderColorKeys[option.value])} title={t(folderColorKeys[option.value])} aria-checked={color === option.value} onClick={() => setColor(option.value)}
+                  className={`h-7 w-7 rounded-full border-2 transition-transform hover:scale-110 ${color === option.value ? "border-neutral-900 ring-2 ring-neutral-300 ring-offset-2" : "border-transparent"}`}
+                  style={{ backgroundColor: option.value }} />
+              ))}
+            </div>
+          </div>
+          <div className="grid grid-cols-[24px_minmax(0,1fr)] gap-3 pt-6">
+            <div />
+            <div className="flex justify-between gap-2">
+              <div>{editing && <Button variant="ghost" disabled={pendingAction !== null} onClick={() => void deleteEvent(editing.id)} className="px-2 text-red-600 hover:bg-red-50"><Trash2 className="h-4 w-4" />{t("common.delete")}</Button>}</div>
+              <Button onClick={() => void addEvent()} disabled={!title.trim() || !parseUserDateTimeLocal(startsAt) || !parseUserDateTimeLocal(endsAt) || parseUserDateTimeLocal(endsAt)! <= parseUserDateTimeLocal(startsAt)! || (repeat === "weekdays" && repeatDays.length === 0) || pendingAction === "save"} className="rounded-full bg-blue-600 px-6 text-white hover:bg-blue-700">
+                {pendingAction === "save" ? t("common.saving") : t("settings.autoReply.save")}
+              </Button>
+            </div>
+          </div>
         </div>
-      )}
+      </Dialog>
     </div>
   );
 }

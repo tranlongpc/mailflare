@@ -2,6 +2,7 @@
 
 import { useEffect, useState, type ReactNode } from "react";
 import { useLanguage } from "@/components/language-provider";
+import { useConfirm } from "@/components/shared/confirm-dialog";
 import type { TranslationKey } from "@/lib/i18n/types";
 import { requestJson } from "./api";
 import ProviderCard from "./ProviderCard";
@@ -33,6 +34,7 @@ type PresenceResponse = Partial<Present> & { resendStatus?: string | null; sesVe
 
 export default function SendingSetupSection({ domain, onChange, busy, message, cloudflareConfig, cloudflareOk }: Props) {
 	const { t } = useLanguage();
+	const confirm = useConfirm();
 	const [present, setPresent] = useState<Present>({ cloudflare: null, resend: null, ses: null });
 	const [resendStatus, setResendStatus] = useState<string | null>(null);
 	const [sesStatus, setSesStatus] = useState<string | null>(null);
@@ -54,7 +56,7 @@ export default function SendingSetupSection({ domain, onChange, busy, message, c
 	}, [domain.id, domain.sendingProvider, reload]);
 
 	async function cleanUp(option: Option, title: string) {
-		if (!window.confirm(t("domains.removeSendingConfirm", { title, host: domain.hostname }))) return;
+		if (!(await confirm({ title: t("domains.removeSendingConfirm", { title, host: domain.hostname }), confirmLabel: t("domains.cleanUp"), destructive: true }))) return;
 		setRemoving(option);
 		setError("");
 		try {

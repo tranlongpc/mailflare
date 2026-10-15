@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { getDb } from "@/db";
 import { domains, mailboxes, users } from "@/db/schema";
-import { requireUser } from "@/lib/auth/cookies";
+import { requireSessionUser } from "@/lib/api/auth";
 import { getEnv } from "@/lib/cloudflare";
 import { getAvatarImageResponse, getOptimizedAvatarFiles, storeAvatarImages } from "@/lib/avatar-images";
 import { getMailboxAccessLevel } from "@/lib/mailboxes/access";
@@ -15,7 +15,9 @@ import { mailboxAvatarKeyFor } from "./utils";
 export async function GET(request: Request, { params }: MailboxAvatarRouteParams) {
 	const { id } = await params;
 	const env = getEnv();
-	const user = await requireUser(env, request);
+	const session = await requireSessionUser(env, request);
+	if (session.error) return session.error;
+	const user = session.user;
 	const db = getDb(env);
 	const access = await getMailboxAccessLevel(db, user, id);
 	if (!access?.canRead) return new Response("Not found", { status: 404 });
@@ -45,7 +47,9 @@ export async function GET(request: Request, { params }: MailboxAvatarRouteParams
 export async function POST(request: Request, { params }: MailboxAvatarRouteParams) {
 	const { id } = await params;
 	const env = getEnv();
-	const user = await requireUser(env, request);
+	const session = await requireSessionUser(env, request);
+	if (session.error) return session.error;
+	const user = session.user;
 	const db = getDb(env);
 	const access = await getMailboxAccessLevel(db, user, id);
 	if (!access?.canManage) {

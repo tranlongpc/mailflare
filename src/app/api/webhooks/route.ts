@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { validationError } from "@/lib/api/responses";
 import { count, desc, eq, max } from "drizzle-orm";
 import { getEnv } from "@/lib/cloudflare";
 import { getDb } from "@/db";
@@ -66,9 +67,7 @@ export async function POST(request: Request) {
 		return NextResponse.json({ error: "Invalid webhook request" }, { status });
 	}
 	const parsed = webhookSchema.safeParse(body);
-	if (!parsed.success) {
-		return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
-	}
+	if (!parsed.success) return validationError(parsed.error);
 
 	const secret = newId("whsec");
 	const db = getDb(env);

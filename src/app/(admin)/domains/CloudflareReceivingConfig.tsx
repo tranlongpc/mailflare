@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useLanguage } from "@/components/language-provider";
+import { useConfirm } from "@/components/shared/confirm-dialog";
 import { Button } from "@/components/ui/button";
 import { runReceivingSetup } from "./api";
 import { StatusRow } from "./status-row";
@@ -17,6 +18,7 @@ type Props = {
 /** Email Routing status for the zone, with a setup that also deals with conflicting MX records. */
 export default function CloudflareReceivingConfig({ domainId, routingOk, routingLabel, manual, onChanged }: Props) {
 	const { t } = useLanguage();
+	const confirm = useConfirm();
 	const [busy, setBusy] = useState(false);
 	const [error, setError] = useState("");
 
@@ -24,7 +26,7 @@ export default function CloudflareReceivingConfig({ domainId, routingOk, routing
 		setBusy(true);
 		setError("");
 		try {
-			if (await runReceivingSetup(domainId, "cloudflare")) onChanged?.();
+			if (await runReceivingSetup(domainId, "cloudflare", confirm)) onChanged?.();
 		} catch (err) {
 			setError(err instanceof Error ? err.message : t("domains.setupFailed"));
 		} finally { setBusy(false); }

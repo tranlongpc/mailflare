@@ -29,7 +29,7 @@ await build({
 const { buildPasswordResetEmail, createTranslator } = await import(pathToFileURL(join(bundleDirectory, "entry.mjs")).href);
 rmSync(bundleDirectory, { recursive: true, force: true });
 
-const turkish = JSON.parse(readFileSync(join(root, "public", "locales", "tr.json"), "utf8"));
+const german = JSON.parse(readFileSync(join(root, "public", "locales", "de.json"), "utf8"));
 const input = { email: "ada@example.com", appName: "Posta", link: "https://mail.example.com/reset-password?token=abc&x=1", minutes: 30 };
 
 test("the reset mail is in English by default", () => {
@@ -41,15 +41,15 @@ test("the reset mail is in English by default", () => {
 });
 
 test("the reset mail follows the chosen language", () => {
-	const mail = buildPasswordResetEmail(createTranslator("tr", turkish), input);
-	assert.equal(mail.subject, "Posta parolanızı sıfırlayın");
-	assert.match(mail.text, /30 dakika içinde/);
-	assert.match(mail.text, /parolanız olduğu gibi kalır/);
+	const mail = buildPasswordResetEmail(createTranslator("de", german), input);
+	assert.equal(mail.subject, "Posta-Passwort zurücksetzen");
+	assert.match(mail.text, /innerhalb von 30 Minuten/);
+	assert.match(mail.text, /das Passwort bleibt unverändert/);
 	assert.ok(!/Someone asked|If that was not you/.test(mail.text + mail.html));
 });
 
 test("the link is never translated or altered", () => {
-	for (const t of [createTranslator("en"), createTranslator("tr", turkish)]) {
+	for (const t of [createTranslator("en"), createTranslator("de", german)]) {
 		const mail = buildPasswordResetEmail(t, input);
 		assert.ok(mail.text.includes(input.link));
 		assert.ok(mail.html.includes("https://mail.example.com/reset-password?token=abc&amp;x=1"));
