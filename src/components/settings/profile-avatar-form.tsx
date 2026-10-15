@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Camera, LoaderCircle, User } from "lucide-react";
+import { Camera, User } from "lucide-react";
 import { authFetch } from "@/lib/auth/client";
 import { getAvatarColorStyle } from "@/lib/avatar-colors";
 import {
@@ -10,7 +10,9 @@ import {
 } from "@/lib/profile/avatar-client";
 import { dispatchMailboxAvatarChanged } from "@/lib/mailboxes/avatar-client";
 import { useLanguage } from "@/components/language-provider";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Spinner } from "@/components/ui/spinner";
 import { ProgressiveAvatarImage } from "@/components/progressive-avatar-image";
 import type { ProfileAvatarFormProps, ProfileAvatarSessionResponse } from "./types";
 import {
@@ -94,11 +96,13 @@ export function ProfileAvatarForm({
 			<Input
 				ref={inputRef}
 				type="file"
+				variant="bare"
 				accept={PROFILE_AVATAR_ACCEPT}
 				className="hidden"
 				onChange={onPick}
 			/>
-			<button
+			<Button
+				variant="unstyled"
 				type="button"
 				onClick={() => inputRef.current?.click()}
 				disabled={busy}
@@ -120,7 +124,7 @@ export function ProfileAvatarForm({
 				)}
 				<span className="absolute inset-0 flex items-center justify-center bg-neutral-950/55 opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">
 					{busy ? (
-						<LoaderCircle className="h-6 w-6 animate-spin" />
+						<Spinner className="h-6 w-6" />
 					) : (
 						<span className="flex flex-col items-center gap-1 text-[11px] font-medium">
 							<Camera className="h-5 w-5" />
@@ -128,7 +132,7 @@ export function ProfileAvatarForm({
 						</span>
 					)}
 				</span>
-			</button>
+			</Button>
 			{status && <p role="alert" className="max-w-xs text-xs text-red-600">{status}</p>}
 		</div>
 	);

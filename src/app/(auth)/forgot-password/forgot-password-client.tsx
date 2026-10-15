@@ -6,6 +6,7 @@ import { KeyRound } from "lucide-react";
 import { useLanguage } from "@/components/language-provider";
 import { AuthShell } from "@/components/auth/auth-shell";
 import { TurnstileField } from "@/components/auth/turnstile";
+import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -59,11 +60,9 @@ export function ForgotPasswordClient() {
 						<Label htmlFor="email">{t("auth.email")}</Label>
 						<Input id="email" name="email" type="email" autoComplete="email" required autoFocus />
 					</div>
-					{error && (
-						<p role="alert" className="rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">{error}</p>
-					)}
+					{error && <Alert variant="destructive">{error}</Alert>}
 					<TurnstileField resetSignal={turnstileReset} />
-					<Button type="submit" className="h-11 w-full rounded-full px-6 active:scale-[0.98]" disabled={loading}>
+					<Button type="submit" size="pill" disabled={loading}>
 						{loading ? t("auth.sending") : t("auth.sendReset")}
 					</Button>
 				</form>

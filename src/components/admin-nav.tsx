@@ -2,13 +2,12 @@
 
 import {
   DatabaseBackup,
+  HardDrive,
   Globe2,
   Activity,
   Mail,
   Settings,
-  Palette,
-  BadgeDollarSign,
-  Users,
+  Palette,  Users,
   Route,
   Webhook,
   KeyRound,
@@ -61,6 +60,7 @@ const sections: { id?: string; labelKey?: TranslationKey; links: AdminNavLink[] 
       { href: "/accounts", labelKey: "admin.nav.accounts", icon: Users },
       { href: "/activity", labelKey: "admin.nav.activity", icon: Activity, permission: "primary" },
       { href: "/backups", labelKey: "admin.nav.backups", icon: DatabaseBackup, permission: "primary" },
+      { href: "/storage", labelKey: "admin.nav.storage", icon: HardDrive, permission: "primary" },
     ],
   },
   {
@@ -68,7 +68,6 @@ const sections: { id?: string; labelKey?: TranslationKey; links: AdminNavLink[] 
     labelKey: "admin.nav.product",
     links: [
       { href: "/branding", labelKey: "admin.nav.branding", icon: Palette, permission: "primary" },
-      { href: "/licenses", labelKey: "admin.nav.licenses", icon: BadgeDollarSign, permission: "primary" },
     ],
   },
 ];

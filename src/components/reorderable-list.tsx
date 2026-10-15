@@ -148,7 +148,7 @@ export function ReorderableList({ lists, storageKey, enabled = true }: Reorderab
 				document.body,
 			)}
 			{drag && createPortal(
-				<div aria-hidden="true" className="pointer-events-none fixed z-[301] cursor-grabbing overflow-hidden rounded-r-full bg-white opacity-90 shadow-lg ring-1 ring-neutral-200" style={{ left: drag.left, width: drag.width, top: drag.pointerY - drag.offsetY }}>
+				<div aria-hidden="true" className="pointer-events-none fixed z-[301] cursor-grabbing overflow-hidden rounded-full bg-white opacity-90 shadow-lg ring-1 ring-neutral-200" style={{ left: drag.left, width: drag.width, top: drag.pointerY - drag.offsetY }}>
 					{nodes.get(drag.id)}
 				</div>,
 				document.body,

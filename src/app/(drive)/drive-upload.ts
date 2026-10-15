@@ -8,12 +8,13 @@ async function readError(response: Response): Promise<Error> {
 }
 
 // XMLHttpRequest rather than fetch, because only it reports upload progress. Browsers that do not
-// compute the length still finish the part; progress then moves once per part.
-function putPart(url: string, chunk: Blob, onBytes: (loaded: number) => void): Promise<void> {
+// compute the length still finish the part; progress then moves once per part. A signed bucket URL carries its
+// own authorization, so our session headers are only sent to our own routes.
+function putPart(url: string, chunk: Blob, onBytes: (loaded: number) => void, signed = false): Promise<void> {
 	return new Promise((resolve, reject) => {
 		const request = new XMLHttpRequest();
 		request.open("PUT", url);
-		getAuthHeaders({ "Content-Type": "application/octet-stream" }).forEach((value, name) => request.setRequestHeader(name, value));
+		if (!signed) getAuthHeaders({ "Content-Type": "application/octet-stream" }).forEach((value, name) => request.setRequestHeader(name, value));
 		request.upload.onprogress = (event) => { if (event.lengthComputable) onBytes(event.loaded); };
 		request.onload = () => {
 			if (request.status >= 200 && request.status < 300) { resolve(); return; }
@@ -27,9 +28,17 @@ function putPart(url: string, chunk: Blob, onBytes: (loaded: number) => void): P
 	});
 }
 
+async function signPart(id: string, partNumber: number): Promise<string | null> {
+	const response = await authFetch(`/api/drive/upload/${id}?part=${partNumber}`);
+	if (!response.ok) return null;
+	return ((await response.json()) as { url?: string }).url ?? null;
+}
+
 /**
- * Uploads a file in parts, each sent as a raw request body. Not multipart/form-data: the runtime treats every
- * multipart POST as a server action and rejects anything over 1 MB.
+ * Uploads a file in parts. When the storage allows it, each part goes from the browser straight to the bucket on a
+ * signed URL, so file bytes never pass through the app. Otherwise, or when the bucket turns the browser away before
+ * any part got through (usually a missing CORS rule), parts go to the app as raw request bodies. Not
+ * multipart/form-data: the runtime treats every multipart POST as a server action and rejects anything over 1 MB.
  *
  * The server remembers which parts arrived. Interrupted uploads (lost connection, closed tab) are not discarded:
  * picking the same file again, same name, size and modified time, into the same folder continues after the last stored part.
@@ -41,11 +50,30 @@ export async function uploadDriveFile(file: File, parentId: string | null, onPro
 		body: JSON.stringify({ name: file.name, size: file.size, contentType: file.type || "application/octet-stream", parentId, fingerprint: String(file.lastModified) }),
 	});
 	if (!start.ok) throw await readError(start);
-	const session = await start.json() as { id?: string; partSize?: number; parts?: number; uploaded?: number[]; resumed?: boolean; complete?: boolean };
+	const session = await start.json() as { id?: string; partSize?: number; parts?: number; uploaded?: number[]; resumed?: boolean; complete?: boolean; direct?: boolean };
 	if (session.complete) return;
 	const { id, partSize, parts } = session as { id: string; partSize: number; parts: number };
 	const stored = new Set(session.uploaded ?? []);
 	const resumed = !!session.resumed;
+	let direct = !!session.direct;
+	let directWorked = false;
+	const sendPart = async (partNumber: number, chunk: Blob, onBytes: (loaded: number) => void) => {
+		if (direct) {
+			const url = await signPart(id, partNumber);
+			if (url) {
+				try {
+					await putPart(url, chunk, onBytes, true);
+					directWorked = true;
+					return;
+				} catch (error) {
+					if (directWorked) throw error;
+				}
+			}
+			direct = false;
+			onBytes(0);
+		}
+		await putPart(`/api/drive/upload/${id}?part=${partNumber}`, chunk, onBytes);
+	};
 	const partBytes = (index: number) => Math.max(0, Math.min(partSize, file.size - index * partSize));
 	let sent = [...stored].reduce((total, part) => total + partBytes(part - 1), 0);
 	// Held at 99% until the server has assembled the parts.
@@ -56,7 +84,7 @@ export async function uploadDriveFile(file: File, parentId: string | null, onPro
 		const chunk = file.slice(index * partSize, (index + 1) * partSize);
 		for (let attempt = 1; ; attempt += 1) {
 			try {
-				await putPart(`/api/drive/upload/${id}?part=${index + 1}`, chunk, (loaded) => report(sent + loaded));
+				await sendPart(index + 1, chunk, (loaded) => report(sent + loaded));
 				break;
 			} catch (error) {
 				if (attempt >= PART_RETRIES) throw error;

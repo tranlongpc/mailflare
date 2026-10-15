@@ -6,17 +6,13 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Activity, Plus, RefreshCw, Send, Trash2 } from "lucide-react";
 import { useLanguage } from "@/components/language-provider";
 import { Badge } from "@/components/ui/badge";
+import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import {
-	Dialog,
-	DialogContent,
-	DialogDescription,
-	DialogHeader,
-	DialogTitle,
-} from "@/components/ui/dialog";
+import { Card } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Dialog } from "@/components/ui/dialog";
+import { FormField } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { SectionRowSkeleton } from "@/components/page-skeletons";
 import type { Webhook, WebhookEvent } from "./types";
@@ -89,27 +85,25 @@ export default function WebhooksPage() {
 
 	return (
 		<div className="space-y-6">
-			<div className="flex flex-wrap items-end justify-between gap-4">
-				<div>
-					<h1 className="text-2xl font-semibold">{t("webhooks.title")}</h1>
-					<p className="mt-1 text-sm text-neutral-500">
-						{t("webhooks.description")}
-					</p>
-				</div>
-				<Button
-					className={mobilePrimaryActionClass}
-					onClick={() => {
-						setError(null);
-						setDialogOpen(true);
-					}}
-				>
-					<Plus className="h-4 w-4" /> {t("webhooks.add")}
-				</Button>
-			</div>
+			<PageHeader
+				className="items-end"
+				title={t("webhooks.title")}
+				description={t("webhooks.description")}
+				actions={
+					<Button
+						className={mobilePrimaryActionClass}
+						onClick={() => {
+							setError(null);
+							setDialogOpen(true);
+						}}
+					>
+						<Plus className="h-4 w-4" /> {t("webhooks.add")}
+					</Button>
+				}
+			/>
 
 			{secret && (
-				<Card>
-					<CardContent className="pt-6 text-sm">
+				<Card variant="section" className="pb-0 text-sm">
 						<p className="font-medium">{t("webhooks.secretTitle")}</p>
 						<p className="mt-1 text-neutral-500">
 							{t("webhooks.secretHint", { header: "\u0001" }).split("\u0001").flatMap((part, index) => index === 0 ? [part] : [<code key={index}>X-Email-Platform-Signature</code>, part])}
@@ -120,7 +114,6 @@ export default function WebhooksPage() {
 						<Button variant="outline" size="sm" className="mt-3" onClick={() => setSecret(null)}>
 							{t("webhooks.dismiss")}
 						</Button>
-					</CardContent>
 				</Card>
 			)}
 			{error && !dialogOpen && <p role="alert" className="text-sm text-red-600">{error}</p>}
@@ -128,10 +121,8 @@ export default function WebhooksPage() {
 			{webhooks.isLoading ? (
 				<SectionRowSkeleton />
 			) : !webhooks.data?.length ? (
-				<Card>
-					<CardContent className="pt-6 text-sm text-neutral-500">
+				<Card variant="section" className="pb-0 text-sm text-neutral-500">
 						{t("webhooks.none")}
-					</CardContent>
 				</Card>
 			) : (
 				<section className="divide-y divide-neutral-100 overflow-hidden rounded-3xl bg-white">
@@ -243,87 +234,72 @@ export default function WebhooksPage() {
 				</section>
 			)}
 
-			<Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-				<DialogContent className="max-h-[calc(100vh-4rem)] overflow-y-auto">
-					<DialogHeader>
-						<DialogTitle>{t("webhooks.add")}</DialogTitle>
-						<DialogDescription>
-							{t("webhooks.addDescription")}
-						</DialogDescription>
-					</DialogHeader>
-					<form
-						className="space-y-4"
-						onSubmit={(e) => {
-							e.preventDefault();
-							create.mutate();
-						}}
-					>
-						<div className="space-y-2">
-							<Label htmlFor="hook-url">{t("webhooks.endpointUrl")}</Label>
-							<Input
-								id="hook-url"
-								type="url"
-								required
-								value={url}
-								onChange={(e) => setUrl(e.target.value)}
+			<Dialog
+				open={dialogOpen}
+				onOpenChange={setDialogOpen}
+				title={t("webhooks.add")}
+				description={t("webhooks.addDescription")}
+				bodyClassName="space-y-4"
+				onSubmit={(e) => {
+					e.preventDefault();
+					create.mutate();
+				}}
+				footer={
+					<>
+						<Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
+							{t("common.cancel")}
+						</Button>
+						<Button type="submit" disabled={create.isPending || events.length === 0}>
+							<RefreshCw
+								className={create.isPending ? "h-4 w-4 animate-spin" : "hidden"}
 							/>
-						</div>
-						<div className="space-y-2">
-							<Label htmlFor="hook-description">{t("webhooks.descriptionLabel")}</Label>
-							<Input
-								id="hook-description"
-								value={description}
-								placeholder={t("webhooks.optional")}
-								onChange={(e) => setDescription(e.target.value)}
+							{t("webhooks.create")}
+						</Button>
+					</>
+				}
+			>
+					<FormField label={t("webhooks.endpointUrl")} htmlFor="hook-url">
+						<Input
+							id="hook-url"
+							type="url"
+							required
+							value={url}
+							onChange={(e) => setUrl(e.target.value)}
+						/>
+					</FormField>
+					<FormField label={t("webhooks.descriptionLabel")} htmlFor="hook-description">
+						<Input
+							id="hook-description"
+							value={description}
+							placeholder={t("webhooks.optional")}
+							onChange={(e) => setDescription(e.target.value)}
+						/>
+					</FormField>
+					<FormField label={t("webhooks.events")}>
+						{WEBHOOK_EVENTS.map((event) => (
+							<Checkbox
+								key={event.value}
+								className="mt-0"
+								labelClassName="flex-row-reverse items-center justify-between rounded-lg border border-neutral-200 px-3 py-2"
+								label={t(event.labelKey)}
+								description={<span className="text-xs">{t(event.hintKey)}</span>}
+								checked={events.includes(event.value)}
+								onChange={() => toggleEvent(event.value)}
 							/>
-						</div>
-						<div className="space-y-2">
-							<Label>{t("webhooks.events")}</Label>
-							{WEBHOOK_EVENTS.map((event) => (
-								<label
-									key={event.value}
-									className="flex cursor-pointer items-center justify-between rounded-lg border border-neutral-200 px-3 py-2"
-								>
-									<span>
-										<span className="block text-sm font-medium">{t(event.labelKey)}</span>
-										<span className="block text-xs text-neutral-500">{t(event.hintKey)}</span>
-									</span>
-									<input
-										type="checkbox"
-										className="h-4 w-4"
-										checked={events.includes(event.value)}
-										onChange={() => toggleEvent(event.value)}
-									/>
-								</label>
-							))}
-						</div>
-						<div className="space-y-2">
-							<Label htmlFor="hook-attempts">{t("webhooks.stat.maxAttempts")}</Label>
-							<Input
-								id="hook-attempts"
-								type="number"
-								min={1}
-								max={10}
-								value={maxAttempts}
-								onChange={(e) => setMaxAttempts(Number(e.target.value))}
-							/>
-						</div>
+						))}
+					</FormField>
+					<FormField label={t("webhooks.stat.maxAttempts")} htmlFor="hook-attempts">
+						<Input
+							id="hook-attempts"
+							type="number"
+							min={1}
+							max={10}
+							value={maxAttempts}
+							onChange={(e) => setMaxAttempts(Number(e.target.value))}
+						/>
+					</FormField>
 
-						{error && <p role="alert" className="text-sm text-red-600">{error}</p>}
-
-						<div className="flex justify-end gap-2">
-							<Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
-								{t("common.cancel")}
-							</Button>
-							<Button type="submit" disabled={create.isPending || events.length === 0}>
-								<RefreshCw
-									className={create.isPending ? "h-4 w-4 animate-spin" : "hidden"}
-								/>
-								{t("webhooks.create")}
-							</Button>
-						</div>
-					</form>
-				</DialogContent>
+					{error && <p role="alert" className="text-sm text-red-600">{error}</p>}
 			</Dialog>
 		</div>
 	);

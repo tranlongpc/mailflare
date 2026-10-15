@@ -6,12 +6,13 @@ import { createPortal } from "react-dom";
 import { HeaderSearch } from "@/components/header-search";
 import { useRouter, useSearchParams } from "next/navigation";
 import toast, { Toaster } from "react-hot-toast";
-import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import clsx from "clsx";
 import { ArrowDown, ArrowUp, ChevronRight, Download, ExternalLink, Mail, MoreVertical, Pencil, RotateCcw, Share2, Trash2, UploadCloud, X } from "lucide-react";
 import { useLanguage } from "@/components/language-provider";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog } from "@/components/ui/dialog";
+import { DropdownMenu } from "@/components/ui/dropdown-menu";
+import type { DropdownItem } from "@/components/ui/dropdown-menu-types";
 import { Input } from "@/components/ui/input";
 import { authFetch } from "@/lib/auth/client";
 import { canEditDrive, DRIVE_MAX_FILE_BYTES, formatDriveSize } from "@/lib/drive/utils";
@@ -36,8 +37,41 @@ import type { DriveListing } from "../drive-cache";
 import { Skeleton } from "@/components/ui/skeleton";
 import { canDropDrive, driveDropHandlers, endDriveDrag, isDriveDraggable, startDriveDrag } from "../drive-drag";
 
-const menuItemClass = "flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2 text-sm text-neutral-700 outline-none data-[highlighted]:bg-neutral-100";
+const menuItemClass = "gap-3 text-neutral-700";
 const dateFormat = new Intl.DateTimeFormat(undefined, { year: "numeric", month: "short", day: "numeric" });
+
+/** Follows a link from a menu row: a download, or a page in a new tab. */
+function followLink(href: string, newTab = false) {
+	const link = document.createElement("a");
+	link.href = href;
+	if (newTab) { link.target = "_blank"; link.rel = "noopener noreferrer"; }
+	link.click();
+}
+
+type DriveRowAction = "open" | "share" | "rename" | "trash" | "restore" | "delete";
+
+/** The kebab menu on a Drive row. Actions are reported to the page, which owns the requests. */
+function DriveRowMenu({ item, onAction }: { item: DriveItemDto; onAction: (action: DriveRowAction) => void }) {
+	const { t } = useLanguage();
+	const items = ([
+		!item.trashedAt && { key: "open", label: t("drive.open"), className: menuItemClass, onSelect: () => onAction("open") },
+		item.kind === "file" && !(item.source && item.trashedAt) && { key: "download", label: t("drive.download"), icon: <Download size={16} />, className: menuItemClass, onSelect: () => followLink(driveFileUrl(item, true)) },
+		item.source && !item.trashedAt && { key: "email", label: <>{t("drive.openEmail")}<span className="sr-only"> ({t("common.opensInNewTab")})</span></>, searchText: t("drive.openEmail"), icon: <Mail size={16} />, className: menuItemClass, onSelect: () => { if (item.source) followLink(emailUrl(item.source), true); } },
+		item.role === "owner" && !item.trashedAt && { key: "share", label: t("drive.share"), icon: <Share2 size={16} />, className: menuItemClass, onSelect: () => onAction("share") },
+		canEditDrive(item.role) && !item.trashedAt && { key: "rename", label: t("drive.rename"), icon: <Pencil size={16} />, className: menuItemClass, onSelect: () => onAction("rename") },
+		(item.source ? item.source.canDelete : canEditDrive(item.role)) && !item.trashedAt && { key: "trash", label: t("drive.moveToTrash"), icon: <Trash2 size={16} />, className: menuItemClass, onSelect: () => onAction("trash") },
+		item.trashedAt && { key: "restore", label: t("drive.restore"), icon: <RotateCcw size={16} />, className: menuItemClass, onSelect: () => onAction("restore") },
+		item.trashedAt && { key: "delete", label: t("drive.deleteForever"), icon: <X size={16} />, destructive: true, className: "gap-3", onSelect: () => onAction("delete") },
+	] as (DropdownItem | false | null | undefined | "")[]).filter((entry): entry is DropdownItem => Boolean(entry));
+	return (
+		<DropdownMenu
+			align="end"
+			offset={4}
+			trigger={<Button variant="unstyled" type="button" aria-label={t("drive.actions")} className="flex h-9 w-9 items-center justify-center rounded-full text-neutral-600 hover:bg-neutral-200"><MoreVertical size={16} /></Button>}
+			items={items}
+		/>
+	);
+}
 
 export default function DrivePage() {
 	const { t } = useLanguage();
@@ -184,6 +218,15 @@ export default function DrivePage() {
 		else setPreview(item);
 	}
 
+	function runRowAction(item: DriveItemDto, action: DriveRowAction) {
+		if (action === "open") open(item);
+		else if (action === "share") setSharing(item);
+		else if (action === "rename") setNaming({ mode: "rename", item, value: item.name });
+		else if (action === "trash") void (item.source ? mutate("/api/drive/attachments", json("POST", { action: "trash", ids: [item.id] }), t("drive.trashed")) : mutate(`/api/drive/items/${item.id}`, json("PATCH", { trashed: true }), t("drive.trashed")));
+		else if (action === "restore") void (item.source ? mutate("/api/drive/attachments", json("POST", { action: "restore", ids: [item.id] }), t("drive.restored")) : mutate(`/api/drive/items/${item.id}`, json("PATCH", { trashed: false }), t("drive.restored")));
+		else if (window.confirm(t("drive.confirmDelete", { name: item.name }))) void (item.source ? mutate("/api/drive/attachments", json("POST", { action: "delete", ids: [item.id] }), t("drive.deleted")) : mutate(`/api/drive/items/${item.id}`, { method: "DELETE" }, t("drive.deleted")));
+	}
+
 	function onDragEnter(event: DragEvent) {
 		if (!canWrite || !event.dataTransfer.types.includes("Files")) return;
 		event.preventDefault();
@@ -238,7 +281,7 @@ export default function DrivePage() {
 	}
 	const SortIcon = ascending ? ArrowUp : ArrowDown;
 	const headerButton = (key: DriveSortKey, label: string) => (
-		<button type="button" onClick={() => toggleSort(key)} className="flex min-w-0 items-center gap-1 font-medium text-neutral-600 hover:text-neutral-900"><span className="truncate">{label}</span>{sortKey === key && <SortIcon size={12} className="shrink-0" />}</button>
+		<Button variant="unstyled" type="button" onClick={() => toggleSort(key)} className="flex min-w-0 items-center gap-1 font-medium text-neutral-600 hover:text-neutral-900"><span className="truncate">{label}</span>{sortKey === key && <SortIcon size={12} className="shrink-0" />}</Button>
 	);
 	const gridStyle = { "--drive-columns": columns.template } as React.CSSProperties;
 
@@ -250,18 +293,18 @@ export default function DrivePage() {
 				<HeaderSearch value={search} onChange={setSearch} label={t("drive.search")} onSubmit={() => router.push(search.trim() ? `/drive?q=${encodeURIComponent(search.trim())}` : "/drive")} />,
 				headerTarget,
 			)}
-			<input ref={fileInput} type="file" multiple hidden onChange={(event) => { void upload([...(event.target.files ?? [])]); event.target.value = ""; }} />
+			<Input variant="bare" ref={fileInput} type="file" multiple hidden onChange={(event) => { void upload([...(event.target.files ?? [])]); event.target.value = ""; }} />
 			<div className="flex min-h-0 flex-1 flex-col rounded-t-3xl bg-white">
 				<div className="flex min-h-[4.25rem] shrink-0 items-center justify-between gap-3 border-b border-neutral-200 px-5 py-3">
 				<div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-1">
 					<nav aria-label={title} className="flex min-w-0 flex-wrap items-center gap-1 text-xl text-neutral-800 max-md:text-lg">
 					{loading && folder ? <Skeleton className="h-7 w-48" /> : path.length === 0 ? <h1 className="font-normal">{title}</h1> : (
 						<>
-							<button type="button" onClick={() => router.push(rootHref)} className="rounded-full px-2 py-1 hover:bg-neutral-100">{view === "shared" || role !== "owner" ? t("drive.sharedWithMe") : t("drive.myDrive")}</button>
+							<Button variant="unstyled" type="button" onClick={() => router.push(rootHref)} className="rounded-full px-2 py-1 hover:bg-neutral-100">{view === "shared" || role !== "owner" ? t("drive.sharedWithMe") : t("drive.myDrive")}</Button>
 							{path.map((crumb, index) => (
 								<span key={crumb.id} className="flex items-center gap-1">
 									<ChevronRight size={18} className="text-neutral-500" />
-									{index === path.length - 1 ? <h1 className="px-2 py-1 font-normal">{crumb.name}</h1> : <button type="button" onClick={() => router.push(`/drive?folder=${encodeURIComponent(crumb.id)}${view === "shared" ? "&view=shared" : ""}`)} className="rounded-full px-2 py-1 hover:bg-neutral-100">{crumb.name}</button>}
+									{index === path.length - 1 ? <h1 className="px-2 py-1 font-normal">{crumb.name}</h1> : <Button variant="unstyled" type="button" onClick={() => router.push(`/drive?folder=${encodeURIComponent(crumb.id)}${view === "shared" ? "&view=shared" : ""}`)} className="rounded-full px-2 py-1 hover:bg-neutral-100">{crumb.name}</Button>}
 								</span>
 							))}
 						</>
@@ -269,7 +312,7 @@ export default function DrivePage() {
 				</nav>
 					{selectedItems.length > 0 && (
 						<span className="flex shrink-0 items-center gap-1 text-sm text-neutral-600">
-							<button type="button" onClick={() => setSelectedIds(new Set())} aria-label={t("navigation.close")} className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-neutral-100"><X size={16} /></button>
+							<Button variant="unstyled" type="button" onClick={() => setSelectedIds(new Set())} aria-label={t("navigation.close")} className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-neutral-100"><X size={16} /></Button>
 							{t("drive.selected", { count: selectedItems.length })}
 						</span>
 					)}
@@ -310,32 +353,15 @@ export default function DrivePage() {
 							return (
 								<div key={item.id} role="listitem" style={gridStyle} draggable={isDriveDraggable(item)} onDragStart={(event) => onItemDragStart(event, item)} onDragEnd={onItemDragEnd} {...dropTarget} className={clsx("group grid grid-cols-[2rem_minmax(0,1fr)_2.5rem] items-center gap-x-4 rounded-lg px-3 text-sm md:grid-cols-[var(--drive-columns)]", dropFolder === item.id ? "bg-blue-100 ring-2 ring-inset ring-blue-500" : selectedIds.has(item.id) ? "bg-blue-50" : "hover:bg-neutral-50", movingIds.has(item.id) && "opacity-50")}>
 									<Checkbox checked={selectedIds.has(item.id)} onChange={() => toggleItem(item.id)} disabled={!selectable.includes(item)} aria-label={t("drive.selectItem", { name: item.name })} className={clsx("ml-1", !selectable.includes(item) && "invisible")} />
-									<button type="button" onClick={() => open(item)} aria-disabled={item.trashedAt ? true : undefined} className="flex min-w-0 items-center gap-3 py-3 text-left aria-disabled:cursor-default">
+									<Button variant="unstyled" type="button" onClick={() => open(item)} aria-disabled={item.trashedAt ? true : undefined} className="flex min-w-0 items-center gap-3 py-3 text-left aria-disabled:cursor-default">
 										<Icon size={16} className={clsx("shrink-0", className)} fill={item.kind === "folder" ? "currentColor" : "none"} />
 										<span className="truncate text-neutral-900">{item.name}</span>
 										{item.shared && item.role === "owner" && <Share2 size={12} className="shrink-0 text-neutral-500" aria-label={t("drive.share")} />}
-									</button>
+									</Button>
 									<span className="hidden md:block"><DriveOwnerAvatar item={item} /></span>
 									<span className="hidden text-neutral-600 md:block">{dateFormat.format(new Date(item.updatedAt))}</span>
 									<span className="hidden text-neutral-600 md:block">{item.kind === "file" ? formatDriveSize(item.size) : "—"}</span>
-									<DropdownMenu.Root>
-										<DropdownMenu.Trigger asChild>
-											<button type="button" aria-label={t("drive.actions")} className="flex h-9 w-9 items-center justify-center rounded-full text-neutral-600 hover:bg-neutral-200"><MoreVertical size={16} /></button>
-										</DropdownMenu.Trigger>
-										<DropdownMenu.Portal>
-											<DropdownMenu.Content align="end" sideOffset={4} className="z-[200] min-w-52 rounded-xl border border-neutral-200 bg-white p-1.5 shadow-xl">
-												{!item.trashedAt && <DropdownMenu.Item className={menuItemClass} onSelect={() => open(item)}>{t("drive.open")}</DropdownMenu.Item>}
-												{item.kind === "file" && !(item.source && item.trashedAt) && <DropdownMenu.Item asChild className={menuItemClass}><a href={driveFileUrl(item, true)}><Download size={16} />{t("drive.download")}</a></DropdownMenu.Item>}
-												{item.source && !item.trashedAt && <DropdownMenu.Item asChild className={menuItemClass}><a href={emailUrl(item.source)} target="_blank" rel="noopener noreferrer"><Mail size={16} />{t("drive.openEmail")}<span className="sr-only"> ({t("common.opensInNewTab")})</span></a></DropdownMenu.Item>}
-												{item.role === "owner" && !item.trashedAt && <DropdownMenu.Item className={menuItemClass} onSelect={() => setSharing(item)}><Share2 size={16} />{t("drive.share")}</DropdownMenu.Item>}
-												{canEditDrive(item.role) && !item.trashedAt && <DropdownMenu.Item className={menuItemClass} onSelect={() => setNaming({ mode: "rename", item, value: item.name })}><Pencil size={16} />{t("drive.rename")}</DropdownMenu.Item>}
-												{item.source?.canDelete && !item.trashedAt && <DropdownMenu.Item className={menuItemClass} onSelect={() => void mutate("/api/drive/attachments", json("POST", { action: "trash", ids: [item.id] }), t("drive.trashed"))}><Trash2 size={16} />{t("drive.moveToTrash")}</DropdownMenu.Item>}
-												{canEditDrive(item.role) && !item.source && !item.trashedAt && <DropdownMenu.Item className={menuItemClass} onSelect={() => void mutate(`/api/drive/items/${item.id}`, json("PATCH", { trashed: true }), t("drive.trashed"))}><Trash2 size={16} />{t("drive.moveToTrash")}</DropdownMenu.Item>}
-												{item.trashedAt && <DropdownMenu.Item className={menuItemClass} onSelect={() => void (item.source ? mutate("/api/drive/attachments", json("POST", { action: "restore", ids: [item.id] }), t("drive.restored")) : mutate(`/api/drive/items/${item.id}`, json("PATCH", { trashed: false }), t("drive.restored")))}><RotateCcw size={16} />{t("drive.restore")}</DropdownMenu.Item>}
-												{item.trashedAt && <DropdownMenu.Item className={clsx(menuItemClass, "text-red-600")} onSelect={() => { if (window.confirm(t("drive.confirmDelete", { name: item.name }))) void (item.source ? mutate("/api/drive/attachments", json("POST", { action: "delete", ids: [item.id] }), t("drive.deleted")) : mutate(`/api/drive/items/${item.id}`, { method: "DELETE" }, t("drive.deleted"))); }}><X size={16} />{t("drive.deleteForever")}</DropdownMenu.Item>}
-											</DropdownMenu.Content>
-										</DropdownMenu.Portal>
-									</DropdownMenu.Root>
+									<DriveRowMenu item={item} onAction={(action) => runRowAction(item, action)} />
 								</div>
 							);
 						})}
@@ -343,34 +369,38 @@ export default function DrivePage() {
 			</div>
 			{dragging && <div className="pointer-events-none absolute inset-2 z-20 flex items-center justify-center rounded-2xl border-2 border-dashed border-blue-500 bg-blue-50/80 text-blue-700"><UploadCloud size={28} /><span className="ml-3 text-base font-medium">{t("drive.fileUpload")}</span></div>}
 
-			<Dialog open={!!naming} onOpenChange={(openState) => { if (!openState) setNaming(null); }}>
-				<DialogContent>
-					<DialogHeader><DialogTitle>{naming?.mode === "create" ? t("drive.newFolder") : t("drive.renameTitle")}</DialogTitle></DialogHeader>
-					<form onSubmit={submitName} className="space-y-5">
-						<Input autoFocus value={naming?.value ?? ""} onChange={(event) => setNaming((current) => current && { ...current, value: event.target.value })} onFocus={(event) => event.currentTarget.select()} aria-label={t("drive.folderName")} maxLength={255} />
-						<div className="flex justify-end gap-2">
-							<Button type="button" variant="ghost" onClick={() => setNaming(null)}>{t("common.cancel")}</Button>
-							<Button type="submit" disabled={!naming?.value.trim()}>{naming?.mode === "create" ? t("drive.create") : t("drive.save")}</Button>
-						</div>
-					</form>
-				</DialogContent>
+			<Dialog
+				open={!!naming}
+				onOpenChange={(openState) => { if (!openState) setNaming(null); }}
+				title={naming?.mode === "create" ? t("drive.newFolder") : t("drive.renameTitle")}
+				onSubmit={submitName}
+				footer={
+					<>
+						<Button type="button" variant="ghost" onClick={() => setNaming(null)}>{t("common.cancel")}</Button>
+						<Button type="submit" disabled={!naming?.value.trim()}>{naming?.mode === "create" ? t("drive.create") : t("drive.save")}</Button>
+					</>
+				}
+			>
+				<Input autoFocus value={naming?.value ?? ""} onChange={(event) => setNaming((current) => current && { ...current, value: event.target.value })} onFocus={(event) => event.currentTarget.select()} aria-label={t("drive.folderName")} maxLength={255} />
 			</Dialog>
 
-			<Dialog open={!!preview} onOpenChange={(openState) => { if (!openState) setPreview(null); }}>
-				<DialogContent overlayClassName="bg-black/65 backdrop-blur-sm" closeClassName="text-white hover:bg-[rgb(255_255_255/0.15)] hover:text-white" className="h-[min(85vh,900px)] w-[min(1100px,calc(100vw-32px))] max-w-none overflow-hidden bg-transparent p-0 shadow-none">
-					{preview && (
-						<div className="flex h-full flex-col">
-							<DialogTitle className="flex h-14 shrink-0 items-center justify-between gap-3 pl-5 pr-14 text-white">
-								<span className="truncate text-base font-medium">{preview.name}</span>
-								<span className="flex shrink-0 items-center gap-1">
-									{preview.source && <a href={emailUrl(preview.source)} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 rounded-full px-3 py-2 text-sm hover:bg-[rgb(255_255_255/0.15)]"><Mail size={16} />{t("drive.openEmail")}<ExternalLink size={12} aria-hidden="true" /><span className="sr-only"> ({t("common.opensInNewTab")})</span></a>}
-									<a href={driveFileUrl(preview, true)} aria-label={t("drive.download")} className="rounded-full p-2 hover:bg-[rgb(255_255_255/0.15)]"><Download size={18} /></a>
-								</span>
-							</DialogTitle>
-							<div className="min-h-0 flex-1 p-3 pt-0"><DrivePreviewBody src={driveFileUrl(preview)} downloadHref={driveFileUrl(preview, true)} contentType={preview.contentType} name={preview.name} /></div>
-						</div>
-					)}
-				</DialogContent>
+			<Dialog
+				open={!!preview}
+				onOpenChange={(openState) => { if (!openState) setPreview(null); }}
+				title={preview && <span className="block truncate text-base font-medium text-white">{preview.name}</span>}
+				headerActions={preview && (
+					<span className="flex shrink-0 items-center gap-1 text-white">
+						{preview.source && <a href={emailUrl(preview.source)} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 rounded-full px-3 py-2 text-sm hover:bg-[rgb(255_255_255/0.15)]"><Mail size={16} />{t("drive.openEmail")}<ExternalLink size={12} aria-hidden="true" /><span className="sr-only"> ({t("common.opensInNewTab")})</span></a>}
+						<a href={driveFileUrl(preview, true)} aria-label={t("drive.download")} className="rounded-full p-2 hover:bg-[rgb(255_255_255/0.15)]"><Download size={18} /></a>
+					</span>
+				)}
+				backdropClassName="bg-black/65 backdrop-blur-sm"
+				closeClassName="top-3 text-white hover:bg-[rgb(255_255_255/0.15)] hover:text-white"
+				className="h-[min(85vh,900px)] w-[min(1100px,calc(100vw-32px))] max-w-none gap-0 overflow-hidden bg-transparent p-0 shadow-none"
+				headerClassName="h-14 justify-center pl-5 pr-6"
+				bodyClassName="mx-0 overflow-hidden px-3 pb-3 pt-0"
+			>
+				{preview && <DrivePreviewBody src={driveFileUrl(preview)} downloadHref={driveFileUrl(preview, true)} contentType={preview.contentType} name={preview.name} />}
 			</Dialog>
 
 			<DriveUploadPanel uploads={uploads} onClose={() => setUploads((list) => list.filter((entry) => entry.status === "queued" || entry.status === "uploading"))} />

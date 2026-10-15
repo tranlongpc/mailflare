@@ -1,9 +1,10 @@
 "use client";
 
-import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { useEffect, useRef, useState } from "react";
 import { CalendarClock, ChevronLeft, ChevronRight, FileText, Plus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Sheet } from "@/components/ui/sheet";
 import { useLanguage } from "@/components/language-provider";
 import { authFetch } from "@/lib/auth/client";
 import { cn } from "@/lib/utils";
@@ -64,102 +65,105 @@ export function ScheduleSendSheet({ open, onOpenChange, value, onChange, onApply
 	}
 
 	return (
-		<DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
-			<DialogPrimitive.Portal>
-				<DialogPrimitive.Overlay className="slide-sheet-overlay fixed inset-0 z-[70] bg-black/40" />
-				<DialogPrimitive.Content
-					aria-label={t("schedule.optionsLabel")}
-					aria-describedby={undefined}
-					className="slide-sheet fixed inset-x-0 bottom-0 z-[70] max-h-[85dvh] overflow-hidden rounded-t-3xl bg-white pb-[env(safe-area-inset-bottom)] shadow-2xl outline-none"
-				>
-					<div className="flex h-14 items-center gap-1 px-2">
-						{page === "root" ? <span className="w-10" /> : (
-							<button type="button" onClick={() => setPage("root")} className="flex h-10 w-10 items-center justify-center rounded-full text-neutral-700 active:bg-neutral-100">
-								<ChevronLeft className="h-6 w-6" />
-								<span className="sr-only">{t("schedule.heading")}</span>
-							</button>
-						)}
-						<DialogPrimitive.Title className="flex-1 truncate text-center text-base font-semibold text-neutral-900">{title}</DialogPrimitive.Title>
-						<DialogPrimitive.Close className="flex h-10 w-10 items-center justify-center rounded-full text-neutral-700 active:bg-neutral-100">
-							<X className="h-5 w-5" />
-							<span className="sr-only">{t("navigation.close")}</span>
-						</DialogPrimitive.Close>
-					</div>
-					<div className="overflow-hidden transition-[height] duration-300 ease-[cubic-bezier(0.2,0.8,0.2,1)] motion-reduce:transition-none" style={{ height }}>
-						<div className="flex items-start transition-transform duration-300 ease-[cubic-bezier(0.2,0.8,0.2,1)] motion-reduce:transition-none" style={{ transform: `translateX(-${PAGES.indexOf(page) * 100}%)` }}>
-							<div ref={(node) => { pageRefs.current.root = node; }} className={pageClass} inert={page !== "root"}>
-								<div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
-									{value && (
-										<button type="button" onClick={() => choose(null)} className={rowClass}>
-											<X className="h-5 w-5 text-neutral-500" />
-											{t("schedule.clear")}
-										</button>
-									)}
-									{options.map((option) => (
-										<button key={option.labelKey} type="button" onClick={() => choose(option.value)} className={cn(rowClass, "justify-between")}>
-											<span>{t(option.labelKey)}</span>
-											<span className="text-sm text-neutral-500">{option.value && formatScheduledSend(option.value)}</span>
-										</button>
-									))}
-								</div>
-								<div className="shrink-0 pt-2">
-									<button type="button" onClick={() => setPage("date")} className={cn(rowClass, "justify-between")}>
-										<span className="flex items-center gap-3"><CalendarClock className="h-5 w-5 text-neutral-500" />{t("schedule.pick", { timeZone: getUserTimeZone() })}</span>
-										<ChevronRight className="h-5 w-5 text-neutral-400" />
-									</button>
-									<button type="button" onClick={() => setPage("templates")} className={cn(rowClass, "justify-between")}>
-										<span className="flex items-center gap-3"><FileText className="h-5 w-5 text-neutral-500" />{t("template.menu")}</span>
-										<ChevronRight className="h-5 w-5 text-neutral-400" />
-									</button>
-								</div>
-							</div>
-							<div ref={(node) => { pageRefs.current.date = node; }} className={pageClass} inert={page !== "date"}>
-								<div className="min-h-0 flex-1 overflow-y-auto px-2">
-									<input
-										type="datetime-local"
-										min={minimum}
-										value={draftDate}
-										onChange={(event) => setDraftDate(event.target.value)}
-										aria-label={t("schedule.pick", { timeZone: getUserTimeZone() })}
-										aria-invalid={pastDate}
-										aria-describedby={pastDate ? "schedule-past-time" : undefined}
-										className="h-12 w-full rounded-xl border border-neutral-200 px-3 text-base outline-none focus:border-blue-400"
-									/>
-									{pastDate && <p id="schedule-past-time" role="alert" className="mt-2 text-sm text-red-600">{t("schedule.pastTime")}</p>}
-								</div>
-								<div className="shrink-0 px-2 pt-4">
-									<Button type="button" className="h-12 w-full rounded-xl text-base" disabled={!parsedDate || pastDate} onClick={() => choose(parsedDate)}>
-										{t("schedule.heading")}
-									</Button>
-								</div>
-							</div>
-							<div ref={(node) => { pageRefs.current.templates = node; }} className={pageClass} inert={page !== "templates"}>
-								<div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
-									{templates.length === 0 && <p className="px-3 py-3 text-sm text-neutral-500">{t("template.none")}</p>}
-									{templates.map((template) => (
-										<button
-											key={template.id}
-											type="button"
-											onClick={() => {
-												onApplyTemplate({ title: template.subject ?? "", html: template.htmlBody ?? textToHtml(template.textBody ?? "") });
-												onOpenChange(false);
-											}}
-											className={rowClass}
-										>
-											<span className="break-words">{template.subject || t("template.untitled")}</span>
-										</button>
-									))}
-								</div>
-								<div className="shrink-0 pt-2">
-									<button type="button" onClick={() => { onOpenChange(false); onNewTemplate(); }} className={cn(rowClass, "text-blue-600")}>
-										<Plus className="h-5 w-5" />{t("template.new")}
-									</button>
-								</div>
-							</div>
+		<Sheet
+			open={open}
+			onOpenChange={onOpenChange}
+			side="bottom"
+			title={title}
+			hideTitle
+			showClose={false}
+			className="max-h-[85dvh] gap-0 p-0 pb-[env(safe-area-inset-bottom)] shadow-2xl"
+			backdropClassName="slide-sheet-overlay bg-black/40"
+			bodyClassName="mx-0 overflow-hidden p-0"
+		>
+			<div className="flex h-14 items-center gap-1 px-2">
+				{page === "root" ? <span className="w-10" /> : (
+					<Button type="button" variant="unstyled" onClick={() => setPage("root")} className="flex h-10 w-10 items-center justify-center rounded-full text-neutral-700 active:bg-neutral-100">
+						<ChevronLeft className="h-6 w-6" />
+						<span className="sr-only">{t("schedule.heading")}</span>
+					</Button>
+				)}
+				<p aria-hidden="true" className="flex-1 truncate text-center text-base font-semibold text-neutral-900">{title}</p>
+				<Button type="button" variant="unstyled" onClick={() => onOpenChange(false)} className="flex h-10 w-10 items-center justify-center rounded-full text-neutral-700 active:bg-neutral-100">
+					<X className="h-5 w-5" />
+					<span className="sr-only">{t("navigation.close")}</span>
+				</Button>
+			</div>
+			<div className="overflow-hidden transition-[height] duration-300 ease-[cubic-bezier(0.2,0.8,0.2,1)] motion-reduce:transition-none" style={{ height }}>
+				<div className="flex items-start transition-transform duration-300 ease-[cubic-bezier(0.2,0.8,0.2,1)] motion-reduce:transition-none" style={{ transform: `translateX(-${PAGES.indexOf(page) * 100}%)` }}>
+					<div ref={(node) => { pageRefs.current.root = node; }} className={pageClass} inert={page !== "root"}>
+						<div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+							{value && (
+								<Button variant="unstyled" type="button" onClick={() => choose(null)} className={rowClass}>
+									<X className="h-5 w-5 text-neutral-500" />
+									{t("schedule.clear")}
+								</Button>
+							)}
+							{options.map((option) => (
+								<Button variant="unstyled" key={option.labelKey} type="button" onClick={() => choose(option.value)} className={cn(rowClass, "justify-between")}>
+									<span>{t(option.labelKey)}</span>
+									<span className="text-sm text-neutral-500">{option.value && formatScheduledSend(option.value)}</span>
+								</Button>
+							))}
+						</div>
+						<div className="shrink-0 pt-2">
+							<Button variant="unstyled" type="button" onClick={() => setPage("date")} className={cn(rowClass, "justify-between")}>
+								<span className="flex items-center gap-3"><CalendarClock className="h-5 w-5 text-neutral-500" />{t("schedule.pick", { timeZone: getUserTimeZone() })}</span>
+								<ChevronRight className="h-5 w-5 text-neutral-400" />
+							</Button>
+							<Button variant="unstyled" type="button" onClick={() => setPage("templates")} className={cn(rowClass, "justify-between")}>
+								<span className="flex items-center gap-3"><FileText className="h-5 w-5 text-neutral-500" />{t("template.menu")}</span>
+								<ChevronRight className="h-5 w-5 text-neutral-400" />
+							</Button>
 						</div>
 					</div>
-				</DialogPrimitive.Content>
-			</DialogPrimitive.Portal>
-		</DialogPrimitive.Root>
+					<div ref={(node) => { pageRefs.current.date = node; }} className={pageClass} inert={page !== "date"}>
+						<div className="min-h-0 flex-1 overflow-y-auto px-2">
+							<Input
+								variant="bare"
+								type="datetime-local"
+								min={minimum}
+								value={draftDate}
+								onChange={(event) => setDraftDate(event.target.value)}
+								aria-label={t("schedule.pick", { timeZone: getUserTimeZone() })}
+								aria-invalid={pastDate}
+								aria-describedby={pastDate ? "schedule-past-time" : undefined}
+								className="h-12 w-full rounded-xl border border-neutral-200 px-3 text-base outline-none focus:border-blue-400"
+							/>
+							{pastDate && <p id="schedule-past-time" role="alert" className="mt-2 text-sm text-red-600">{t("schedule.pastTime")}</p>}
+						</div>
+						<div className="shrink-0 px-2 pt-4">
+							<Button type="button" className="h-12 w-full rounded-xl text-base" disabled={!parsedDate || pastDate} onClick={() => choose(parsedDate)}>
+								{t("schedule.heading")}
+							</Button>
+						</div>
+					</div>
+					<div ref={(node) => { pageRefs.current.templates = node; }} className={pageClass} inert={page !== "templates"}>
+						<div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+							{templates.length === 0 && <p className="px-3 py-3 text-sm text-neutral-500">{t("template.none")}</p>}
+							{templates.map((template) => (
+								<Button
+									variant="unstyled"
+									key={template.id}
+									type="button"
+									onClick={() => {
+										onApplyTemplate({ title: template.subject ?? "", html: template.htmlBody ?? textToHtml(template.textBody ?? "") });
+										onOpenChange(false);
+									}}
+									className={rowClass}
+								>
+									<span className="break-words">{template.subject || t("template.untitled")}</span>
+								</Button>
+							))}
+						</div>
+						<div className="shrink-0 pt-2">
+							<Button variant="unstyled" type="button" onClick={() => { onOpenChange(false); onNewTemplate(); }} className={cn(rowClass, "text-blue-600")}>
+								<Plus className="h-5 w-5" />{t("template.new")}
+							</Button>
+						</div>
+					</div>
+				</div>
+			</div>
+		</Sheet>
 	);
 }

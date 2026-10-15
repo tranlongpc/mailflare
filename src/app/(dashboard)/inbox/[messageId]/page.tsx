@@ -6,6 +6,7 @@ import { Cloud, ExternalLink } from "lucide-react";
 import { useLanguage } from "@/components/language-provider";
 import { formatUserDate } from "@/lib/time/utils";
 import { MarkAsRead } from "@/components/mark-read";
+import { Button } from "@/components/ui/button";
 import { useSelectedMailbox } from "@/components/mailbox-provider";
 import { ContactDetailsTrigger } from "@/components/contacts/contact-details";
 import { ContactAvatar } from "@/components/contacts/contact-avatar";
@@ -262,9 +263,9 @@ export default function MessageDetailPage() {
                 </p>
                 <div className="sm:hidden flex items-center gap-2 text-xs text-neutral-500">
                   <span>{messageDate(false)}</span>
-                  <button type="button" className="text-blue-600 hover:underline" aria-expanded={detailsOpen} onClick={() => setDetailsOpen((open) => !open)}>
+                  <Button type="button" variant="unstyled" className="text-blue-600 hover:underline" aria-expanded={detailsOpen} onClick={() => setDetailsOpen((open) => !open)}>
                     {t("message.details")}
-                  </button>
+                  </Button>
                 </div>
                 {ccEntries.length > 0 && (
                   <p className="text-xs text-neutral-500">

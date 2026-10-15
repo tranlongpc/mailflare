@@ -5,7 +5,8 @@ import { useParams } from "next/navigation";
 import { useLanguage } from "@/components/language-provider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { FormField } from "@/components/ui/form";
+import { PageHeader } from "@/components/shared/page-header";
 import type { ManagedAccount } from "../types";
 import { fetchManagedAccount } from "../utils";
 import { saveAccountPassword } from "./utils";
@@ -26,10 +27,7 @@ export default function AccountPasswordPage() {
 
 	return (
 		<div className="space-y-6">
-			<div>
-				<h1 className="text-2xl md:text-3xl font-medium text-neutral-900">{t("account.password.title")}</h1>
-				<p className="mt-2 text-sm text-neutral-500">{t("account.password.resetFor", { name: account?.name ?? t("account.password.thisAccount") })}</p>
-			</div>
+			<PageHeader title={t("account.password.title")} description={t("account.password.resetFor", { name: account?.name ?? t("account.password.thisAccount") })} />
 			<form
 				onSubmit={(event) => void saveAccountPassword({ event, account, password, setPassword, setSaving, setMessage, t })}
 				className="space-y-5 rounded-3xl bg-white p-6"
@@ -38,8 +36,7 @@ export default function AccountPasswordPage() {
 					<p className="text-sm text-neutral-500">{t("account.password.onlyPrimary")}</p>
 				) : (
 					<>
-						<div className="space-y-2">
-							<Label htmlFor="account-new-password">{t("account.password.new")}</Label>
+						<FormField label={t("account.password.new")} htmlFor="account-new-password" description={t("account.password.hint")}>
 							<Input
 								id="account-new-password"
 								type="password"
@@ -52,10 +49,7 @@ export default function AccountPasswordPage() {
 								onChange={(event) => setPassword(event.target.value)}
 								placeholder={t("account.password.placeholder")}
 							/>
-							<p className="text-xs leading-5 text-neutral-500">
-								{t("account.password.hint")}
-							</p>
-						</div>
+						</FormField>
 						<Button type="submit" disabled={!account || saving || password.trim().length < 8}>
 							{saving ? t("account.password.resetting") : t("account.password.reset")}
 						</Button>

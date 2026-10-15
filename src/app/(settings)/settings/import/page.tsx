@@ -2,21 +2,17 @@
 
 import type { FormEvent } from "react";
 import { useMemo, useState } from "react";
-import { Folder, Server, Upload } from "lucide-react";
+import { Upload } from "lucide-react";
 import { useLanguage } from "@/components/language-provider";
 import type { TranslationKey } from "@/lib/i18n/types";
 import { useSelectedMailbox } from "@/components/mailbox-provider";
+import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Popover } from "@/components/ui/popover";
 import { Select } from "@/components/ui/select";
 import { importMessageFiles } from "@/components/settings/import-messages-utils";
 import type {
@@ -243,54 +239,63 @@ export default function SettingsImportPage() {
           </p>
         </div>
         <div className="space-y-1 overflow-hidden rounded-3xl">
-          <CardContent className="space-y-6 rounded-b-lg rounded-t-3xl bg-white p-6">
+          <Card
+            variant="plain"
+            padding={false}
+            className="rounded-b-lg rounded-t-3xl bg-white p-6"
+            contentClassName="space-y-6"
+          >
             <div className="flex flex-col gap-2">
               <Label htmlFor="import-source">{t("importPage.source")}</Label>
               <Select
                 id="import-source"
                 value={activeTab}
-                onChange={(event) =>
-                  setActiveTab(event.target.value as ImportTab)
-                }
-                className="text-sm w-full py-2"
-                // className="h-10 w-full rounded-md border border-neutral-200 bg-white px-3 text-sm text-neutral-900 shadow-sm shadow-neutral-200/50 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-              >
-                <option value="file">{t("importPage.backupFile")}</option>
-                <option value="imap">{t("importPage.imap")}</option>
-              </Select>
+                onValueChange={(value) => setActiveTab(value as ImportTab)}
+                options={[
+                  { value: "file", label: t("importPage.backupFile") },
+                  { value: "imap", label: t("importPage.imap") },
+                ]}
+                containerClassName="w-full"
+                className="text-sm py-2"
+              />
             </div>
             <div className="space-y-2">
               <Label>{t("importPage.chooseSections")}</Label>
 
-              <div className="relative">
-                <button
-                  type="button"
-                  onClick={() => setSourceDropdownOpen((open) => !open)}
-                  className="flex w-full items-center justify-between rounded-md border border-neutral-200 bg-white px-3 py-2 text-left text-sm shadow-sm shadow-neutral-200/50"
-                >
-                  <label className="flex-1">{t("importPage.selected")}</label>
-                  <span className="truncate">{sourceSummary}</span>
-                  <span className="text-neutral-500 px-2">▾</span>
-                </button>
-                {sourceDropdownOpen && (
-                  <div className="absolute z-20 mt-2 w-full rounded-xl border border-neutral-200 bg-white p-2 shadow-lg">
-                    {importSourceOptions.map((option) => (
-                      <label
-                        key={option.value}
-                        className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-neutral-700 hover:bg-neutral-50"
-                      >
-                        <Checkbox
-                          checked={selectedSections.includes(option.value)}
-                          onChange={(event) =>
-                            toggleSection(option.value, event.target.checked)
-                          }
-                        />
+              <Popover
+                open={sourceDropdownOpen}
+                onOpenChange={setSourceDropdownOpen}
+                offset={8}
+                matchWidth
+                className="p-2 shadow-lg"
+                trigger={
+                  <Button
+                    type="button"
+                    variant="unstyled"
+                    className="flex w-full items-center justify-between rounded-md border border-neutral-200 bg-white px-3 py-2 text-left text-sm shadow-sm shadow-neutral-200/50"
+                  >
+                    <span className="flex-1">{t("importPage.selected")}</span>
+                    <span className="truncate">{sourceSummary}</span>
+                    <span className="text-neutral-500 px-2">▾</span>
+                  </Button>
+                }
+              >
+                {importSourceOptions.map((option) => (
+                  <Checkbox
+                    key={option.value}
+                    checked={selectedSections.includes(option.value)}
+                    onChange={(event) =>
+                      toggleSection(option.value, event.target.checked)
+                    }
+                    labelClassName="gap-2 rounded-lg px-3 py-2 text-neutral-700 hover:bg-neutral-50"
+                    label={
+                      <span className="font-normal">
                         {t(SECTION_LABEL_KEYS[option.value])}
-                      </label>
-                    ))}
-                  </div>
-                )}
-              </div>
+                      </span>
+                    }
+                  />
+                ))}
+              </Popover>
               {/* <p className="text-xs leading-5 text-neutral-500">
             Select Folders to import every source IMAP folder into matching
             Mailflare folders.
@@ -317,9 +322,9 @@ export default function SettingsImportPage() {
                     </p>
                   </div>
                   {selectedSections.includes("others") && (
-                    <p className="rounded-lg border border-amber-100 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+                    <Alert variant="warning" className="rounded-lg text-amber-700">
                       {t("importPage.othersNote")}
-                    </p>
+                    </Alert>
                   )}
                   <Button
                     type="submit"
@@ -350,14 +355,14 @@ export default function SettingsImportPage() {
                     </div>
                   )}
                   {fileResult && (
-                    <p className="rounded-lg border border-green-100 bg-green-50 px-4 py-3 text-sm text-green-700">
+                    <Alert variant="success" className="rounded-lg text-green-700">
                       {formatImportResult(fileResult, t)}
-                    </p>
+                    </Alert>
                   )}
                   {fileError && (
-                    <p className="rounded-lg border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700">
+                    <Alert variant="destructive" className="rounded-lg">
                       {fileError}
-                    </p>
+                    </Alert>
                   )}
                 </form>
               </>
@@ -442,30 +447,28 @@ export default function SettingsImportPage() {
                         }
                       />
                     </div>
-                    <label className="flex items-end gap-2 pb-2 text-sm text-neutral-700">
-                      <Checkbox
-                        checked={imapForm.importAll}
-                        onChange={(event) =>
-                          setImapForm({
-                            ...imapForm,
-                            importAll: event.target.checked,
-                          })
-                        }
-                      />
-                      {t("importPage.importAll")}
-                    </label>
-                    <label className="flex items-end gap-2 pb-2 text-sm text-neutral-700">
-                      <Checkbox
-                        checked={imapForm.secure}
-                        onChange={(event) =>
-                          setImapForm({
-                            ...imapForm,
-                            secure: event.target.checked,
-                          })
-                        }
-                      />
-                      {t("importPage.useTls")}
-                    </label>
+                    <Checkbox
+                      checked={imapForm.importAll}
+                      onChange={(event) =>
+                        setImapForm({
+                          ...imapForm,
+                          importAll: event.target.checked,
+                        })
+                      }
+                      labelClassName="items-end gap-2 pb-2 text-neutral-700"
+                      label={<span className="font-normal">{t("importPage.importAll")}</span>}
+                    />
+                    <Checkbox
+                      checked={imapForm.secure}
+                      onChange={(event) =>
+                        setImapForm({
+                          ...imapForm,
+                          secure: event.target.checked,
+                        })
+                      }
+                      labelClassName="items-end gap-2 pb-2 text-neutral-700"
+                      label={<span className="font-normal">{t("importPage.useTls")}</span>}
+                    />
                   </div>
                   <p className="rounded-lg border border-neutral-200 bg-neutral-50 px-4 py-3 text-xs leading-5 text-neutral-500">
                     {t("importPage.imapNote")}
@@ -506,19 +509,19 @@ export default function SettingsImportPage() {
                     </div>
                   )}
                   {imapResult && (
-                    <p className="rounded-lg border border-green-100 bg-green-50 px-4 py-3 text-sm text-green-700">
+                    <Alert variant="success" className="rounded-lg text-green-700">
                       {formatImportResult(imapResult, t)}
-                    </p>
+                    </Alert>
                   )}
                   {imapError && (
-                    <p className="rounded-lg border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700">
+                    <Alert variant="destructive" className="rounded-lg">
                       {imapError}
-                    </p>
+                    </Alert>
                   )}
                 </form>
               </>
             )}
-          </CardContent>
+          </Card>
         </div>
       </section>
     </div>

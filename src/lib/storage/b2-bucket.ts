@@ -5,17 +5,17 @@ import type { B2Config, B2HttpMetadata } from "@/lib/storage/b2-types";
 
 /**
  * The slice of the R2 bucket API the app uses (get with a range, put, head, delete, multipart uploads),
- * served by Backblaze B2 over its S3-compatible API. Signing reuses the SigV4 client, so it runs on Workers and Node.
+ * served by any S3-compatible API (Backblaze B2, AWS S3, R2's S3 API, Wasabi, MinIO...). Signing reuses the SigV4 client, so it runs on Workers and Node.
  */
-type PutValue = ArrayBuffer | ArrayBufferView | string | ReadableStream | Blob | null;
-type PutOptions = { httpMetadata?: B2HttpMetadata | Headers; customMetadata?: Record<string, string> };
+export type PutValue = ArrayBuffer | ArrayBufferView | string | ReadableStream | Blob | null;
+export type PutOptions = { httpMetadata?: B2HttpMetadata | Headers; customMetadata?: Record<string, string> };
 
 const META_PREFIX = "x-amz-meta-";
 
-const encodePath = (key: string) => `/${key.split("/").map((part) => encodeURIComponent(part).replace(/[!'()*]/g, (c) => `%${c.charCodeAt(0).toString(16).toUpperCase()}`)).join("/")}`;
+export const encodePath = (key: string) => `/${key.split("/").map((part) => encodeURIComponent(part).replace(/[!'()*]/g, (c) => `%${c.charCodeAt(0).toString(16).toUpperCase()}`)).join("/")}`;
 const escapeXml = (value: string) => value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
-async function toBuffer(value: PutValue): Promise<ArrayBuffer> {
+export async function toBuffer(value: PutValue): Promise<ArrayBuffer> {
 	if (value === null) return new ArrayBuffer(0);
 	if (typeof value === "string") return new TextEncoder().encode(value).buffer as ArrayBuffer;
 	if (value instanceof ArrayBuffer) return value;
@@ -49,12 +49,12 @@ export class B2Object {
 	readonly httpMetadata: B2HttpMetadata;
 	readonly customMetadata: Record<string, string>;
 
-	constructor(readonly key: string, private readonly response: Response, size?: number) {
+	constructor(readonly key: string, private readonly response: Response, size?: number, metadata?: { httpMetadata: B2HttpMetadata; customMetadata: Record<string, string> }) {
 		const headers = response.headers;
 		this.size = size ?? objectSize(headers);
 		this.etag = (headers.get("etag") ?? "").replace(/"/g, "");
 		this.uploaded = new Date(headers.get("last-modified") ?? Date.now());
-		const meta = readMetadata(headers);
+		const meta = metadata ?? readMetadata(headers);
 		this.httpMetadata = meta.httpMetadata;
 		this.customMetadata = meta.customMetadata;
 	}
@@ -75,17 +75,23 @@ export class B2Object {
 	}
 }
 
+/** Where requests for a bucket go: `bucket.endpoint` (virtual-hosted), or `endpoint` with the bucket as the first path segment. */
+export function bucketAddress(config: Pick<B2Config, "bucket" | "endpoint" | "pathStyle">): { host: string; prefix: string } {
+	return config.pathStyle ? { host: config.endpoint, prefix: `/${encodeURIComponent(config.bucket)}` } : { host: `${config.bucket}.${config.endpoint}`, prefix: "" };
+}
+
 export class B2Bucket {
 	private readonly credentials: AwsConfig;
 	private readonly host: string;
+	private readonly prefix: string;
 
 	constructor(private readonly config: B2Config) {
 		this.credentials = { accessKeyId: config.keyId, secretAccessKey: config.applicationKey, region: config.region };
-		this.host = `${config.bucket}.${config.endpoint}`;
+		({ host: this.host, prefix: this.prefix } = bucketAddress(config));
 	}
 
 	private request(key: string | null, init: { method?: string; query?: Record<string, string>; body?: string | ArrayBuffer; headers?: Record<string, string> } = {}) {
-		return awsRequest({ config: this.credentials, service: "s3", host: this.host, path: key === null ? "/" : encodePath(key), ...init });
+		return awsRequest({ config: this.credentials, service: "s3", host: this.host, path: key === null ? `${this.prefix}/` : `${this.prefix}${encodePath(key)}`, ...init });
 	}
 
 	private metadataHeaders(options?: PutOptions): Record<string, string> {

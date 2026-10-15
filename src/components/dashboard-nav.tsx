@@ -22,16 +22,9 @@ import {
 } from "lucide-react";
 import { useSelectedMailbox } from "@/components/mailbox-provider";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+import { Dialog } from "@/components/ui/dialog";
+import { Form, FormField } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { useMessageCounts } from "@/hooks/use-message-counts";
 import { authFetch } from "@/lib/auth/client";
 import {
@@ -84,14 +77,15 @@ const FOLDERS_OPEN_KEY = "mailflare:nav:folders-open";
 function NavToggle({ expanded, onClick, collapsedLabel, expandedLabel }: { expanded: boolean; onClick: () => void; collapsedLabel?: string; expandedLabel?: string }) {
   const { t } = useLanguage();
   return (
-    <button
+    <Button
+      variant="unstyled"
       type="button"
       onClick={onClick}
       aria-expanded={expanded}
-      className="flex h-9 w-full items-center rounded-r-full pl-[52px] text-left text-sm text-neutral-700 transition-colors hover:bg-stone-200/60 max-md:min-h-11 max-md:pl-14 max-md:text-base"
+      className="flex h-9 w-full items-center rounded-full pl-10 text-left text-sm text-neutral-700 transition-colors hover:bg-neutral-200/60 max-md:min-h-11 max-md:pl-11 max-md:text-base"
     >
       {expanded ? (expandedLabel ?? t("navigation.less")) : (collapsedLabel ?? t("navigation.more"))}
-    </button>
+    </Button>
   );
 }
 
@@ -253,26 +247,24 @@ export function DashboardNav({ className }: { className?: string }) {
       {!minimal && (
         <NavSectionHeader label={t("navigation.folders")} open={foldersSectionOpen} onToggle={toggleFoldersSection}>
           {selectedMailbox && (
-            <Dialog open={folderDialogOpen} onOpenChange={setFolderDialogOpen}>
-              <DialogTrigger asChild>
-                <button
-                  type="button"
-                  className="flex h-7 w-7 items-center justify-center rounded-lg text-neutral-500 hover:bg-blue-50 hover:text-blue-700"
-                  aria-label={t("navigation.createFolder")}
-                >
-                  <Plus className="h-4 w-4" />
-                </button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>{t("navigation.createFolder")}</DialogTitle>
-                  <DialogDescription>
-                    {t("navigation.folderDescription")}
-                  </DialogDescription>
-                </DialogHeader>
-                <form onSubmit={createFolder} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="folderName">{t("navigation.folderName")}</Label>
+            <>
+              <Button
+                variant="unstyled"
+                type="button"
+                onClick={() => setFolderDialogOpen(true)}
+                className="flex h-7 w-7 items-center justify-center rounded-lg text-neutral-500 hover:bg-blue-50 hover:text-blue-700"
+                aria-label={t("navigation.createFolder")}
+              >
+                <Plus className="h-4 w-4" />
+              </Button>
+              <Dialog
+                open={folderDialogOpen}
+                onOpenChange={setFolderDialogOpen}
+                title={t("navigation.createFolder")}
+                description={t("navigation.folderDescription")}
+              >
+                <Form onSubmit={createFolder}>
+                  <FormField label={t("navigation.folderName")} htmlFor="folderName">
                     <Input
                       id="folderName"
                       value={newFolderName}
@@ -280,16 +272,16 @@ export function DashboardNav({ className }: { className?: string }) {
                       placeholder={t("navigation.folderExample")}
                       autoFocus
                     />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>{t("navigation.color")}</Label>
+                  </FormField>
+                  <FormField label={t("navigation.color")}>
                     <div
                       className="flex flex-wrap gap-2"
                       role="radiogroup"
                       aria-label={t("navigation.folderColor")}
                     >
                       {FOLDER_COLOR_OPTIONS.map((option) => (
-                        <button
+                        <Button
+                          variant="unstyled"
                           key={option.value}
                           type="button"
                           role="radio"
@@ -306,22 +298,22 @@ export function DashboardNav({ className }: { className?: string }) {
                         />
                       ))}
                     </div>
-                  </div>
+                  </FormField>
                   <Button
                     type="submit"
                     disabled={addingFolder || !newFolderName.trim()}
                   >
                     {addingFolder ? t("navigation.creating") : t("navigation.createFolder")}
                   </Button>
-                </form>
-              </DialogContent>
-            </Dialog>
+                </Form>
+              </Dialog>
+            </>
           )}
         </NavSectionHeader>
       )}
       
       {!minimal && foldersSectionOpen && folders.length === 0 && (
-        <div className="px-4 py-1.5 text-xs text-neutral-500">
+        <div className="px-3 py-1.5 text-xs text-neutral-500">
           {t("navigation.noFolders")}
         </div>
       )}

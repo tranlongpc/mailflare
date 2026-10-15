@@ -6,6 +6,7 @@ import { useState } from "react";
 import { LockKeyhole } from "lucide-react";
 import { useLanguage } from "@/components/language-provider";
 import { AuthShell } from "@/components/auth/auth-shell";
+import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -96,10 +97,8 @@ export function ResetPasswordClient() {
 							required
 						/>
 					</div>
-					{error && (
-						<p role="alert" className="rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">{error}</p>
-					)}
-					<Button type="submit" className="h-11 w-full rounded-full px-6 active:scale-[0.98]" disabled={loading}>
+					{error && <Alert variant="destructive">{error}</Alert>}
+					<Button type="submit" size="pill" disabled={loading}>
 						{loading ? t("common.saving") : t("auth.reset.setNew")}
 					</Button>
 				</form>

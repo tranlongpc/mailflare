@@ -4,16 +4,10 @@ import { useEffect, useState } from "react";
 import { useLanguage } from "@/components/language-provider";
 import { formatUserDate } from "@/lib/time/utils";
 import { Button } from "@/components/ui/button";
-import {
-	Dialog,
-	DialogContent,
-	DialogDescription,
-	DialogHeader,
-	DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog } from "@/components/ui/dialog";
+import { FormField } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { ContactAvatarForm } from "./contact-avatar-form";
-import { Label } from "@/components/ui/label";
 import type { ContactDetailsRecord, ContactDetailsTriggerProps } from "./contact-details-types";
 import {
 	fetchContactDetails,
@@ -90,71 +84,64 @@ export function ContactDetailsTrigger({
 
 	return (
 		<>
-			<button
+			<Button
 				type="button"
+				variant="unstyled"
 				onClick={() => handleOpenChange(true)}
 				className={`${className ?? ""} rounded-sm text-left hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-200`}
 			>
 				{shownName}
-			</button>
-			<Dialog open={open} onOpenChange={handleOpenChange}>
-				<DialogContent>
-					<DialogHeader>
-						<DialogTitle>{t("contact.title")}</DialogTitle>
-						<DialogDescription>{t("contact.description")}</DialogDescription>
-					</DialogHeader>
-					<div className="space-y-5">
-						<div className="flex flex-col items-start gap-4">
-							<ContactAvatarForm
-								mailboxId={mailboxId}
-								address={address}
-								name={displayName}
-								hasAvatar={contact?.hasAvatar ?? false}
-								onAvatarChange={(hasAvatar) => setContact((current) => current ? { ...current, hasAvatar } : current)}
-							/>
-						</div>
-						<div className="space-y-2">
-							<Label htmlFor="contact-display-name">{t("contact.name")}</Label>
-							<Input
-								id="contact-display-name"
-								value={displayName}
-								onChange={(event) => setDisplayName(event.target.value)}
-								disabled={loading || saving}
-							/>
-						</div>
-						<div className="space-y-2">
-							<Label htmlFor="contact-email">{t("contact.email")}</Label>
-							<Input
-								id="contact-email"
-								value={contact?.email ?? address}
-								disabled
-							/>
-						</div>
-						<div className="grid gap-3 rounded-lg bg-neutral-50 p-3 text-sm sm:grid-cols-2">
-							<div>
-								<p className="text-xs font-medium uppercase text-neutral-500">{t("contact.source")}</p>
-								<p className="mt-1 capitalize text-neutral-700">{contact?.source ?? t("contact.sourceEmail")}</p>
-							</div>
-							<div>
-								<p className="text-xs font-medium uppercase text-neutral-500">{t("contact.lastSeen")}</p>
-								<p className="mt-1 text-neutral-700">
-									{contact?.lastSeenAt ? formatUserDate(contact.lastSeenAt, { month: "short", day: "2-digit", year: "numeric" }) : t("contact.unknown")}
-								</p>
-							</div>
-							{contact?.blocked && (
-								<p className="text-sm font-medium text-red-600">{t("contact.blocked")}</p>
-							)}
-						</div>
-						{error && <p role="alert" className="text-sm text-red-600">{error}</p>}
-						<Button
-							type="button"
-							onClick={saveContact}
-							disabled={loading || saving || !displayName.trim()}
-						>
-							{saving ? t("contact.saving") : t("contact.save")}
-						</Button>
+			</Button>
+			<Dialog open={open} onOpenChange={handleOpenChange} title={t("contact.title")} description={t("contact.description")}>
+				<div className="space-y-5">
+					<div className="flex flex-col items-start gap-4">
+						<ContactAvatarForm
+							mailboxId={mailboxId}
+							address={address}
+							name={displayName}
+							hasAvatar={contact?.hasAvatar ?? false}
+							onAvatarChange={(hasAvatar) => setContact((current) => current ? { ...current, hasAvatar } : current)}
+						/>
 					</div>
-				</DialogContent>
+					<FormField label={t("contact.name")} htmlFor="contact-display-name">
+						<Input
+							id="contact-display-name"
+							value={displayName}
+							onChange={(event) => setDisplayName(event.target.value)}
+							disabled={loading || saving}
+						/>
+					</FormField>
+					<FormField label={t("contact.email")} htmlFor="contact-email">
+						<Input
+							id="contact-email"
+							value={contact?.email ?? address}
+							disabled
+						/>
+					</FormField>
+					<div className="grid gap-3 rounded-lg bg-neutral-50 p-3 text-sm sm:grid-cols-2">
+						<div>
+							<p className="text-xs font-medium uppercase text-neutral-500">{t("contact.source")}</p>
+							<p className="mt-1 capitalize text-neutral-700">{contact?.source ?? t("contact.sourceEmail")}</p>
+						</div>
+						<div>
+							<p className="text-xs font-medium uppercase text-neutral-500">{t("contact.lastSeen")}</p>
+							<p className="mt-1 text-neutral-700">
+								{contact?.lastSeenAt ? formatUserDate(contact.lastSeenAt, { month: "short", day: "2-digit", year: "numeric" }) : t("contact.unknown")}
+							</p>
+						</div>
+						{contact?.blocked && (
+							<p className="text-sm font-medium text-red-600">{t("contact.blocked")}</p>
+						)}
+					</div>
+					{error && <p role="alert" className="text-sm text-red-600">{error}</p>}
+					<Button
+						type="button"
+						onClick={saveContact}
+						disabled={loading || saving || !displayName.trim()}
+					>
+						{saving ? t("contact.saving") : t("contact.save")}
+					</Button>
+				</div>
 			</Dialog>
 		</>
 	);

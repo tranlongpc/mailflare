@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useLanguage } from "@/components/language-provider";
 import { LanguageSelector } from "@/components/language-selector";
+import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ForwardingEmailForm } from "./forwarding-email-form";
 import { MailboxSignatureForm } from "./mailbox-signature-form";
@@ -66,22 +67,14 @@ export function AccountSettings() {
 					/>
 
 					{user.canForwardEmail && (
-						<div className="space-y-4 rounded-lg bg-white p-6">
-							<div>
-								<h3 className="text-lg font-semibold text-neutral-900">{t("settings.account.forwardingTitle")}</h3>
-								<p className="mt-1 text-sm text-neutral-500">{t("settings.account.forwardingDescription")}</p>
-							</div>
-						<ForwardingEmailForm initialForwardingEmail={user.forwardingEmail ?? ""} />
-						</div>
+						<Card className="gap-4 rounded-lg" title={t("settings.account.forwardingTitle")} description={t("settings.account.forwardingDescription")}>
+							<ForwardingEmailForm initialForwardingEmail={user.forwardingEmail ?? ""} />
+						</Card>
 					)}
 
-					<div className="space-y-4 rounded-b-3xl rounded-t-lg bg-white p-6">
-						<div>
-							<h3 className="text-lg font-semibold text-neutral-900">{t("settings.account.signatureTitle")}</h3>
-							<p className="mt-1 text-sm text-neutral-500">{t("settings.account.signatureDescription")}</p>
-						</div>
-					<MailboxSignatureForm />
-					</div>
+					<Card className="gap-4 rounded-b-3xl rounded-t-lg" title={t("settings.account.signatureTitle")} description={t("settings.account.signatureDescription")}>
+						<MailboxSignatureForm />
+					</Card>
 				</div>
 			</section>
 
@@ -91,10 +84,9 @@ export function AccountSettings() {
 					<p className="mt-1 text-sm text-neutral-500">{t("settings.account.generalDescription")}</p>
 				</div>
 				<div className="space-y-1 overflow-hidden rounded-3xl">
-					<div className="rounded-t-3xl rounded-b-lg bg-white p-6">
-						<h3 className="mb-3 text-lg font-semibold text-neutral-900">{t("language.label")}</h3>
+					<Card className="gap-3 rounded-t-3xl rounded-b-lg" title={t("language.label")}>
 						<div className="max-w-xs [&>div]:px-0 [&_label]:sr-only"><LanguageSelector /></div>
-					</div>
+					</Card>
 					<TimeZoneForm userId={user.id} initialTimeZone={user.timeZone} />
 				</div>
 			</section>

@@ -6,6 +6,7 @@ import { useState } from "react";
 import { Mail, ShieldCheck } from "lucide-react";
 import { useLanguage } from "@/components/language-provider";
 import { AuthShell } from "@/components/auth/auth-shell";
+import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -102,16 +103,13 @@ export function LoginClient({ adding = false }: { adding?: boolean }) {
               required
             />
           </div>
-          {error && (
-            <p role="alert" className="rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
-              {error}
-            </p>
-          )}
-          <Button type="submit" className="h-11 w-full rounded-full px-6 active:scale-[0.98]" disabled={loading}>
+          {error && <Alert variant="destructive">{error}</Alert>}
+          <Button type="submit" size="pill" disabled={loading}>
             {loading ? t("auth.verifying") : t("auth.verify")}
           </Button>
-          <button
+          <Button
             type="button"
+            variant="unstyled"
             className="w-full text-center text-sm text-neutral-500 hover:text-neutral-800"
             onClick={() => {
               setChallengeToken(null);
@@ -120,7 +118,7 @@ export function LoginClient({ adding = false }: { adding?: boolean }) {
             }}
           >
             {t("auth.backToSignIn")}
-          </button>
+          </Button>
         </form>
       </AuthShell>
     );
@@ -130,11 +128,7 @@ export function LoginClient({ adding = false }: { adding?: boolean }) {
     <AuthShell
       icon={Mail}
       title={adding ? t("auth.addAnother") : t("auth.signIn")}
-      description={
-        adding
-          ? t("auth.addDescription")
-          : t("auth.signInDescription")
-      }
+      description={adding ? t("auth.addDescription") : undefined}
     >
       <form method="post" onSubmit={onSubmit} className="space-y-5">
         <div className="space-y-2">
@@ -167,14 +161,14 @@ export function LoginClient({ adding = false }: { adding?: boolean }) {
           />
         </div>
         {error && (
-          <p id="login-error" role="alert" className="rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+          <Alert id="login-error" variant="destructive">
             {error}
-          </p>
+          </Alert>
         )}
         <TurnstileField resetSignal={turnstileReset} />
         <Button
           type="submit"
-          className="h-11 w-full rounded-full px-6 active:scale-[0.98]"
+          size="pill"
           disabled={loading}
         >
           {loading ? t("auth.signingIn") : t("auth.signIn")}

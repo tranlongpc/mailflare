@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useLanguage } from "@/components/language-provider";
 import { useShortcuts } from "@/components/shortcuts";
+import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 
 export function InboxShortcutsSettings() {
@@ -18,7 +19,7 @@ export function InboxShortcutsSettings() {
 
 	return (
 		<div>
-			<label className="flex items-start gap-3 rounded-xl bg-neutral-50 p-4">
+			<Label className="flex items-start gap-3 rounded-xl bg-neutral-50 p-4 font-normal leading-normal">
 				<span className="flex-1">
 					<span className="block text-sm font-medium text-neutral-900">{t("settings.shortcuts.title")}</span>
 					<span className="mt-1 block text-sm text-neutral-500">
@@ -37,7 +38,7 @@ export function InboxShortcutsSettings() {
 					}}
 					aria-label={t("settings.shortcuts.enable")}
 				/>
-			</label>
+			</Label>
 			{(saveError || shortcutsPreferenceError) && (
 				<p role="alert" className="mt-2 px-4 text-sm text-red-600">{saveError || shortcutsPreferenceError}</p>
 			)}

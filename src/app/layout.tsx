@@ -23,7 +23,7 @@ export async function generateMetadata(): Promise<Metadata> {
 	const { appName } = await getHomeBranding();
 	return {
 		title: appName,
-		description: "Multi-tenant email on Cloudflare",
+		description: "Email Pro",
 		icons: { icon: "/api/branding/icon", apple: "/icon-192.png" },
 		appleWebApp: {
 			capable: true,
@@ -58,7 +58,8 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
 				<script dangerouslySetInnerHTML={{ __html: themeBootstrapScript }} />
 				<link rel="icon" href="/api/branding/icon"></link>
 			</head>
-			<body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+			{/* Browser extensions (ColorZilla, Grammarly…) add attributes to <body> before hydration. */}
+			<body className={`${geistSans.variable} ${geistMono.variable} antialiased`} suppressHydrationWarning>
 				<LanguageProvider initialLocale={locale} initialMessages={messages}><Providers initialBranding={branding}>{children}</Providers></LanguageProvider>
 			</body>
 		</html>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import {
 	disablePushNotifications,
@@ -61,7 +62,7 @@ export function PushNotificationSettings() {
 
 	return (
 		<div>
-			<label className="flex items-start gap-3 rounded-xl bg-neutral-50 p-4">
+			<Label className="flex items-start gap-3 rounded-xl bg-neutral-50 p-4 font-normal leading-normal">
 				<span className="flex-1">
 					<span className="block text-sm font-medium text-neutral-900">Browser push notifications</span>
 					<span className="mt-1 block text-sm text-neutral-500">{description}</span>
@@ -84,7 +85,7 @@ export function PushNotificationSettings() {
 					}}
 					aria-label="Enable browser push notifications"
 				/>
-			</label>
+			</Label>
 			{state.error && <p role="alert" className="mt-2 px-4 text-sm text-red-600">{state.error}</p>}
 		</div>
 	);

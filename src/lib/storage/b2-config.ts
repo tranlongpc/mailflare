@@ -69,3 +69,33 @@ export function describeB2Problem(env: B2Env): string | null {
 	if (present < 4) return "Backblaze B2 needs B2_KEY_ID, B2_APPLICATION_KEY, B2_BUCKET and B2_ENDPOINT together.";
 	return "B2_ENDPOINT must look like s3.us-west-004.backblazeb2.com.";
 }
+
+const HOST_PATTERN = /^(?=.{1,253}(:\d{1,5})?$)[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)*(:\d{1,5})?$/;
+
+/** A bare host (with an optional port) for an S3-compatible endpoint; schemes and trailing slashes are dropped. HTTPS only. */
+export function normalizeStorageEndpoint(value: string): string | null {
+	const host = normalizeB2Endpoint(value);
+	return HOST_PATTERN.test(host) ? host : null;
+}
+
+/** The signing region an endpoint implies, when it names one. */
+export function guessStorageRegion(endpoint: string): string | null {
+	if (/\.r2\.cloudflarestorage\.com$/.test(endpoint)) return "auto";
+	const s3Style = /^s3[.-]([a-z0-9-]+)\.(amazonaws\.com|backblazeb2\.com|wasabisys\.com)$/.exec(endpoint);
+	if (s3Style && s3Style[1] !== "amazonaws") return s3Style[1];
+	return /^([a-z0-9-]+)\.digitaloceanspaces\.com$/.exec(endpoint)?.[1] ?? null;
+}
+
+
+/** Bunny Storage regions: the API host for each. Falkenstein (the main region) has no prefix. */
+export const BUNNY_STORAGE_REGIONS = [
+	{ id: "de", label: "Falkenstein (DE)", endpoint: "storage.bunnycdn.com" },
+	{ id: "uk", label: "London (UK)", endpoint: "uk.storage.bunnycdn.com" },
+	{ id: "se", label: "Stockholm (SE)", endpoint: "se.storage.bunnycdn.com" },
+	{ id: "ny", label: "New York (US)", endpoint: "ny.storage.bunnycdn.com" },
+	{ id: "la", label: "Los Angeles (US)", endpoint: "la.storage.bunnycdn.com" },
+	{ id: "sg", label: "Singapore (SG)", endpoint: "sg.storage.bunnycdn.com" },
+	{ id: "syd", label: "Sydney (AU)", endpoint: "syd.storage.bunnycdn.com" },
+	{ id: "br", label: "São Paulo (BR)", endpoint: "br.storage.bunnycdn.com" },
+	{ id: "jh", label: "Johannesburg (ZA)", endpoint: "jh.storage.bunnycdn.com" },
+] as const;

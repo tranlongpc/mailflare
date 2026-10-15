@@ -4,19 +4,16 @@ import { mobilePrimaryActionClass } from "@/components/page-header-utils";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 import { useLanguage } from "@/components/language-provider";
+import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+import { Dialog } from "@/components/ui/dialog";
+import { FormField } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { List } from "@/components/ui/list";
-import { CheckCircle2, LoaderCircle, Plus } from "lucide-react";
+import { Select } from "@/components/ui/select";
+import { Spinner } from "@/components/ui/spinner";
+import { CheckCircle2, Plus } from "lucide-react";
 import { authFetch } from "@/lib/auth/client";
 import type { DnsAuthRecord, DnsStatusSummary, Domain, DomainDnsCache, DomainDnsView, DomainPreflight, ReceivingProvider, SendingProvider } from "./types";
 import DomainItemCard from "./DomainItemCard";
@@ -275,32 +272,29 @@ export default function DomainsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-medium">{t("domains.title")}</h1>
-          <p className="mt-1 text-sm text-neutral-500">
-            {managesDns
-              ? t("domains.descriptionManaged")
-              : t("domains.descriptionManual")}
-          </p>
-        </div>
-        <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-          <DialogTrigger asChild>
-            <Button className={mobilePrimaryActionClass}>
-              <Plus className="h-4 w-4" />
-              {t("domains.new")}
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>{t("domains.addTitle")}</DialogTitle>
-              <DialogDescription>
-                {t("domains.addDescription")}
-              </DialogDescription>
-            </DialogHeader>
+      <PageHeader
+        className="items-center"
+        title={t("domains.title")}
+        description={
+          managesDns
+            ? t("domains.descriptionManaged")
+            : t("domains.descriptionManual")
+        }
+        actions={
+          <Button className={mobilePrimaryActionClass} onClick={() => setCreateOpen(true)}>
+            <Plus className="h-4 w-4" />
+            {t("domains.new")}
+          </Button>
+        }
+      />
+        <Dialog
+          open={createOpen}
+          onOpenChange={setCreateOpen}
+          title={t("domains.addTitle")}
+          description={t("domains.addDescription")}
+        >
             <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="hostname">{t("domains.hostname")}</Label>
+              <FormField label={t("domains.hostname")} htmlFor="hostname">
                 <Input
                   id="hostname"
                   value={hostname}
@@ -313,7 +307,7 @@ export default function DomainsPage() {
                   onBlur={() => void inspectDomain()}
                   placeholder="example.com"
                 />
-              </div>
+              </FormField>
               <div className="flex items-center justify-between gap-4 rounded-xl bg-neutral-50 px-4 py-3">
                 <div>
                   <Label htmlFor="receiving-provider">{t("domains.receiveWith")}</Label>
@@ -325,17 +319,18 @@ export default function DomainsPage() {
                         : t("domains.providerHintLater")}
                   </p>
                 </div>
-                <select
+                <Select
                   id="receiving-provider"
                   value={receivingProvider}
-                  onChange={(e) => setReceivingProvider(e.target.value as ReceivingProvider)}
-                  className="h-9 shrink-0 rounded-md border border-neutral-200 bg-white px-3 text-sm"
-                >
-                  <option value="cloudflare">{t("domains.cloudflareRouting")}</option>
-                  <option value="resend">Resend</option>
-                  <option value="ses">Amazon SES</option>
-                  <option value="none">{t("domains.notSelected")}</option>
-                </select>
+                  onValueChange={(value) => setReceivingProvider(value as ReceivingProvider)}
+                  containerClassName="h-9 shrink-0 rounded-md"
+                  options={[
+                    { value: "cloudflare", label: t("domains.cloudflareRouting") },
+                    { value: "resend", label: "Resend" },
+                    { value: "ses", label: "Amazon SES" },
+                    { value: "none", label: t("domains.notSelected") },
+                  ]}
+                />
               </div>
               <div className="flex items-center justify-between gap-4 rounded-xl bg-neutral-50 px-4 py-3">
                 <div>
@@ -350,18 +345,19 @@ export default function DomainsPage() {
                           : t("domains.providerHintLater")}
                   </p>
                 </div>
-                {domainChecking && <LoaderCircle className="h-4 w-4 shrink-0 animate-spin text-neutral-500" />}
-                <select
+                {domainChecking && <Spinner className="h-4 w-4 shrink-0 text-neutral-500" />}
+                <Select
                   id="sending-provider"
                   value={sendingProvider}
-                  onChange={(e) => setSendingProvider(e.target.value as SendingProvider)}
-                  className="h-9 shrink-0 rounded-md border border-neutral-200 bg-white px-3 text-sm"
-                >
-                  <option value="cloudflare">{t("domains.cloudflareSending")}</option>
-                  <option value="resend">Resend</option>
-                  <option value="ses">Amazon SES</option>
-                  <option value="none">{t("domains.notSelected")}</option>
-                </select>
+                  onValueChange={(value) => setSendingProvider(value as SendingProvider)}
+                  containerClassName="h-9 shrink-0 rounded-md"
+                  options={[
+                    { value: "cloudflare", label: t("domains.cloudflareSending") },
+                    { value: "resend", label: "Resend" },
+                    { value: "ses", label: "Amazon SES" },
+                    { value: "none", label: t("domains.notSelected") },
+                  ]}
+                />
               </div>
               {domainCheck && (
                 <div className="flex items-center gap-3 rounded-xl bg-green-50 px-4 py-3 text-sm text-green-700">
@@ -399,9 +395,7 @@ export default function DomainsPage() {
                 {create.isPending ? t("onboarding.adding") : t("domains.addTitle")}
               </Button>
             </div>
-          </DialogContent>
         </Dialog>
-      </div>
       <section className="space-y-3">
         {/* <div className="flex items-center justify-between">
 					<span className="text-sm text-neutral-500">{(data?.domains ?? []).length} total</span>

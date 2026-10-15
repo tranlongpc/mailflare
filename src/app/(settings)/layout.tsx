@@ -10,7 +10,6 @@ import { MailSearchInput } from "@/components/mail-search/mail-search-input";
 import { MailSearchProvider } from "@/components/mail-search/mail-search-context";
 import { MailboxProvider } from "@/components/mailbox-provider";
 import { MailboxSelector } from "@/components/mailbox-selector";
-import { LicenseIndicator } from "@/components/license-indicator";
 import { DashboardNav } from "@/components/dashboard-nav";
 import { SidebarProvider } from "@/components/sidebar-state";
 import { ShortcutsProvider } from "@/components/shortcuts";
@@ -35,8 +34,8 @@ export default function DashboardLayout({
                   <SidebarAside>
                     <DashboardNav />
                   </SidebarAside>
-                  <div className="flex min-h-0 min-w-0 flex-col">
-                    <header className="flex h-16 w-full shrink-0 items-center gap-4 pr-4 text-sm">
+                  <div className="flex min-h-0 min-w-0 flex-col md:pl-3">
+                    <header className="flex h-16 w-full shrink-0 items-center gap-4 pr-4 text-sm md:pr-3">
                       <MobileMenuButton className="ml-2" />
                       <MailSearchInput />
                       {/* <Link
@@ -45,7 +44,6 @@ export default function DashboardLayout({
                   >
                     <HelpCircle className="h-5 w-5" />
                   </Link> */}
-                      <LicenseIndicator />
                       <MailboxSelector />
                     </header>
                     <main id="main-content" tabIndex={-1} className="focus:outline-none page-flush min-h-0 flex-1 overflow-y-auto max-md:rounded-t-3xl max-md:bg-white overscroll-contain scrollbar-gutter-stable">

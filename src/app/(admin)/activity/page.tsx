@@ -5,6 +5,8 @@ import { LogIn, LogOut } from "lucide-react";
 import { useLanguage } from "@/components/language-provider";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { PageHeader } from "@/components/shared/page-header";
 import {
   fetchActivity,
   formatActivityDate,
@@ -21,60 +23,55 @@ export default function ActivityPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl md:text-3xl font-medium text-neutral-900">{t("activity.title")}</h1>
-        <p className="mt-1 text-sm text-neutral-500">
-          {t("activity.description")}
-        </p>
-      </div>
+      <PageHeader title={t("activity.title")} description={t("activity.description")} />
 
       <section role="region" tabIndex={0} aria-label={t("activity.title")} className="overflow-x-auto rounded-3xl bg-white">
-        <table className="w-full min-w-[760px] table-fixed text-left">
-          <thead className="border-b border-neutral-100 bg-neutral-50 text-xs font-semibold uppercase tracking-wide text-neutral-500">
-            <tr>
-              <th scope="col" className="w-32 px-5 py-3">{t("activity.col.activity")}</th>
-              <th scope="col" className="px-5 py-3">{t("activity.col.user")}</th>
-              <th scope="col" className="w-64 px-5 py-3">{t("activity.col.device")}</th>
-              <th scope="col" className="w-48 px-5 py-3">{t("activity.col.time")}</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-neutral-100">
+        <Table containerClassName="overflow-visible" className="min-w-[760px] table-fixed text-left text-base">
+          <TableHeader className="border-neutral-100 bg-neutral-50 font-semibold uppercase tracking-wide">
+            <TableRow>
+              <TableHead scope="col" className="w-32 px-5 py-3 font-semibold">{t("activity.col.activity")}</TableHead>
+              <TableHead scope="col" className="px-5 py-3 font-semibold">{t("activity.col.user")}</TableHead>
+              <TableHead scope="col" className="w-64 px-5 py-3 font-semibold">{t("activity.col.device")}</TableHead>
+              <TableHead scope="col" className="w-48 px-5 py-3 font-semibold">{t("activity.col.time")}</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {activity.isLoading &&
               Array.from({ length: 7 }, (_, index) => (
-                <tr key={index}>
-                  <td className="px-5 py-4">
+                <TableRow key={index}>
+                  <TableCell className="px-5 py-4">
                     <Skeleton className="h-6 w-20" />
-                  </td>
-                  <td className="px-5 py-4">
+                  </TableCell>
+                  <TableCell className="px-5 py-4">
                     <Skeleton className="h-9 w-48" />
-                  </td>
-                  <td className="px-5 py-4">
+                  </TableCell>
+                  <TableCell className="px-5 py-4">
                     <Skeleton className="h-9 w-40" />
-                  </td>
-                  <td className="px-5 py-4">
+                  </TableCell>
+                  <TableCell className="px-5 py-4">
                     <Skeleton className="h-4 w-32" />
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ))}
             {!activity.isLoading && (activity.data ?? []).length === 0 && (
-              <tr>
-                <td colSpan={4} className="px-5 py-4 text-sm text-neutral-500">
+              <TableRow>
+                <TableCell colSpan={4} className="px-5 py-4 text-sm text-neutral-500">
                   {t("activity.none")}
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             )}
             {(activity.data ?? []).map((log) => {
               const metadata = getActivityMetadata(log);
               const Icon = log.action === "auth.logout" ? LogOut : LogIn;
               return (
-                <tr key={log.id} className="align-top hover:bg-neutral-50/70">
-                  <td className="px-5 py-4">
+                <TableRow key={log.id} className="align-top hover:bg-neutral-50/70">
+                  <TableCell className="px-5 py-4 align-top">
                     <Badge variant="outline" className="gap-1">
                       <Icon className="h-3 w-3" />
                       {getActivityLabel(log.action, t)}
                     </Badge>
-                  </td>
-                  <td className="px-5 py-4">
+                  </TableCell>
+                  <TableCell className="px-5 py-4 align-top">
                     <p className="flex flex-col truncate no-font-mono">
                       <span>{log.actorEmail ?? t("activity.unknownEmail")}</span>
                     </p>
@@ -82,8 +79,8 @@ export default function ActivityPage() {
                       {metadata.city || t("activity.unknownCity")} •{" "}
                       {metadata.country || t("activity.unknownCountry")}
                     </small>
-                  </td>
-                  <td className="px-5 py-4">
+                  </TableCell>
+                  <TableCell className="px-5 py-4 align-top">
                     <p className="flex flex-col truncate no-font-mono">
                       {metadata.device ?? t("activity.unknownDevice")}
                     </p>
@@ -92,15 +89,15 @@ export default function ActivityPage() {
                       {metadata.platform || t("activity.unknownPlatform")} •{" "}
                       {metadata.ipAddress ?? t("activity.unknownIp")}
                     </small>
-                  </td>
-                  <td className="px-5 py-4 text-sm text-neutral-500">
+                  </TableCell>
+                  <TableCell className="px-5 py-4 align-top text-sm text-neutral-500">
                     {formatActivityDate(log.createdAt)}
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               );
             })}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </section>
     </div>
   );

@@ -13,15 +13,13 @@ export function AccountAliases({ domains, domainId, username, useAllDomains, onU
 	const availableDomains = domains.filter((domain) => domain.status === "active");
 	return (
 		<div className="space-y-4 border-t border-neutral-100 pt-4">
-			<label className="flex items-start gap-3 rounded-xl bg-neutral-50 p-4">
-				<Checkbox checked={useAllDomains} onChange={(event) => onUseAllDomainsChange(event.target.checked)} />
-				<span>
-					<span className="block text-sm font-medium">{t("aliases.useAll")}</span>
-					<span className="mt-1 block text-sm text-neutral-500">
-						{t("aliases.useAllHint")}
-					</span>
-				</span>
-			</label>
+			<Checkbox
+				checked={useAllDomains}
+				onChange={(event) => onUseAllDomainsChange(event.target.checked)}
+				label={t("aliases.useAll")}
+				description={t("aliases.useAllHint")}
+				labelClassName="rounded-xl bg-neutral-50 p-4"
+			/>
 			<div className="space-y-3">
 				<div>
 					<p className="text-sm font-medium">{t("aliases.additional")} <span className="font-normal text-neutral-500">{t("aliases.optional")}</span></p>
@@ -44,13 +42,12 @@ export function AccountAliases({ domains, domainId, username, useAllDomains, onU
 							<Select
 								aria-label={t("aliases.domainLabel", { n: index + 1 })}
 								value={alias.domainId}
-								onChange={(event) => onAliasesChange(aliases.map((item) => item.id === alias.id ? { ...item, domainId: event.target.value } : item))}
-								containerClassName="min-w-0 flex-1 self-stretch rounded-none border-0 px-0"
-								className="min-w-0 bg-transparent px-2 text-sm"
+								onValueChange={(value) => onAliasesChange(aliases.map((item) => item.id === alias.id ? { ...item, domainId: value } : item))}
+								options={availableDomains.map((domain) => ({ value: domain.id, label: domain.hostname }))}
+								containerClassName="min-w-0 flex-1 self-stretch rounded-none border-0 bg-transparent px-0"
+								className="pl-2"
 								required
-							>
-								{availableDomains.map((domain) => <option key={domain.id} value={domain.id}>{domain.hostname}</option>)}
-							</Select>
+							/>
 						</div>
 						<Button type="button" variant="ghost" size="sm" className="h-10 w-10 shrink-0 p-0" aria-label={t("aliases.remove", { n: index + 1 })} onClick={() => onAliasesChange(aliases.filter((item) => item.id !== alias.id))}>
 							<Trash2 className="h-4 w-4" />

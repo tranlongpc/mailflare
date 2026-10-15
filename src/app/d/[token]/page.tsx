@@ -3,6 +3,7 @@
 import { use, useEffect, useState } from "react";
 import { ChevronRight, Download } from "lucide-react";
 import { useLanguage } from "@/components/language-provider";
+import { Button } from "@/components/ui/button";
 import { formatDriveSize } from "@/lib/drive/utils";
 import { DrivePreviewBody } from "@/app/(drive)/drive-preview";
 import { driveIconFor, publicContentUrl, sortDriveItems } from "@/app/(drive)/drive-utils";
@@ -39,7 +40,7 @@ export default function PublicDrivePage({ params }: { params: Promise<{ token: s
 				{path.map((crumb, index) => (
 					<span key={crumb.id} className="flex items-center gap-1">
 						{index > 0 && <ChevronRight size={18} className="text-neutral-500" />}
-						{index === path.length - 1 ? <h1 className="px-2 py-1">{crumb.name}</h1> : <button type="button" onClick={() => setItemId(crumb.id)} className="rounded-full px-2 py-1 hover:bg-neutral-200/60">{crumb.name}</button>}
+						{index === path.length - 1 ? <h1 className="px-2 py-1">{crumb.name}</h1> : <Button type="button" variant="unstyled" onClick={() => setItemId(crumb.id)} className="rounded-full px-2 py-1 hover:bg-neutral-200/60">{crumb.name}</Button>}
 					</span>
 				))}
 				{isFile && <a href={publicContentUrl(token, item.id, true)} className="ml-auto inline-flex items-center gap-2 rounded-full bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"><Download size={16} />{t("drive.download")}</a>}
@@ -59,10 +60,10 @@ function PublicRow({ entry, token, onOpen }: { entry: PublicDriveItem; token: st
 	const { Icon, className } = driveIconFor(entry);
 	return (
 		<div className="flex items-center gap-4 rounded-lg px-3 text-sm hover:bg-neutral-50">
-			<button type="button" onClick={() => onOpen(entry.id)} className="flex min-w-0 flex-1 items-center gap-4 py-3 text-left">
+			<Button type="button" variant="unstyled" onClick={() => onOpen(entry.id)} className="flex min-w-0 flex-1 items-center gap-4 py-3 text-left">
 				<Icon size={16} className={className} fill={entry.kind === "folder" ? "currentColor" : "none"} />
 				<span className="truncate text-neutral-900">{entry.name}</span>
-			</button>
+			</Button>
 			{entry.kind === "file" && <span className="hidden shrink-0 text-neutral-500 sm:block">{formatDriveSize(entry.size)}</span>}
 			{entry.kind === "file" && <a href={publicContentUrl(token, entry.id, true)} aria-label={entry.name} className="shrink-0 rounded-full p-2 text-neutral-600 hover:bg-neutral-200"><Download size={16} /></a>}
 		</div>

@@ -16,8 +16,8 @@ async function bundle(entry, outfile) {
 	return import(pathToFileURL(join(outDir, outfile)).href);
 }
 
-const { getB2Config, getS3Config, describeB2Problem } = await bundle("src/lib/storage/b2-config.ts", "config.mjs");
-const { B2Bucket } = await bundle("src/lib/storage/b2-bucket.ts", "bucket.mjs");
+const { getB2Config, getS3Config, describeB2Problem, normalizeStorageEndpoint, guessStorageRegion } = await bundle("src/lib/storage/b2-config.ts", "config.mjs");
+const { B2Bucket, bucketAddress } = await bundle("src/lib/storage/b2-bucket.ts", "bucket.mjs");
 const { withStorage } = await bundle("src/lib/storage/index.ts", "index.mjs");
 
 test("getB2Config needs all four variables and a backblaze endpoint", () => {
@@ -30,14 +30,86 @@ test("getB2Config needs all four variables and a backblaze endpoint", () => {
 	assert.equal(describeB2Problem({}), null);
 });
 
-test("withStorage swaps BUCKET only when B2 is configured", () => {
-	const plain = { BUCKET: "r2", DB: "d1" };
-	assert.equal(withStorage(plain), plain);
-	const configured = { BUCKET: "r2", DB: "d1", B2_KEY_ID: "k", B2_APPLICATION_KEY: "s", B2_BUCKET: "b", B2_ENDPOINT: "s3.us-west-004.backblazeb2.com" };
-	const env = withStorage(configured);
+function memoryBucket() {
+	const objects = new Map();
+	const calls = [];
+	return {
+		objects,
+		calls,
+		async get(key) { calls.push(["get", key]); return objects.has(key) ? { key, text: async () => objects.get(key) } : null; },
+		async head(key) { calls.push(["head", key]); return objects.has(key) ? { key } : null; },
+		async put(key, value) { calls.push(["put", key]); objects.set(key, value); return { key }; },
+		async delete(keys) { calls.push(["delete", keys]); for (const key of [keys].flat()) objects.delete(key); },
+	};
+}
+
+test("withStorage routes BUCKET to the default binding when nothing else is configured", async () => {
+	const base = memoryBucket();
+	const env = withStorage({ BUCKET: base, DB: "d1" });
 	assert.equal(env.DB, "d1");
-	assert.notEqual(env.BUCKET, "r2");
 	assert.equal(withStorage(env), env);
+	await env.BUCKET.put("a", "1");
+	assert.equal(await (await env.BUCKET.get("a")).text(), "1");
+	await env.BUCKET.delete("a");
+	assert.deepEqual(base.calls.map(([name]) => name), ["put", "get", "delete"]);
+});
+
+test("with B2 configured, writes go to B2, missed reads fall back to the binding, deletes reach both", async () => {
+	const base = memoryBucket();
+	base.objects.set("old", "from r2");
+	const remote = new Map();
+	const origFetch = globalThis.fetch;
+	globalThis.fetch = async (input, init = {}) => {
+		const url = new URL(typeof input === "string" ? input : input.href ?? input.url);
+		const key = decodeURIComponent(url.pathname.slice(1));
+		const method = init.method ?? "GET";
+		if (method === "PUT") { remote.set(key, Buffer.from(init.body).toString()); return new Response("", { status: 200, headers: { ETag: '"e"' } }); }
+		if (method === "DELETE") { remote.delete(key); return new Response(null, { status: 204 }); }
+		if (!remote.has(key)) return new Response("<Error><Code>NoSuchKey</Code></Error>", { status: 404 });
+		return new Response(remote.get(key), { status: 200 });
+	};
+	try {
+		const env = withStorage({ BUCKET: base, DB: "d1", B2_KEY_ID: "k", B2_APPLICATION_KEY: "s", B2_BUCKET: "b", B2_ENDPOINT: "s3.us-west-004.backblazeb2.com" });
+		await env.BUCKET.put("new", "to b2");
+		assert.equal(remote.get("new"), "to b2");
+		assert.equal(base.objects.has("new"), false);
+		assert.equal(await (await env.BUCKET.get("new")).text(), "to b2");
+		assert.equal(await (await env.BUCKET.get("old")).text(), "from r2");
+		assert.equal(await env.BUCKET.get("missing"), null);
+		await env.BUCKET.delete(["new", "old"]);
+		assert.equal(remote.has("new"), false);
+		assert.equal(base.objects.has("old"), false);
+	} finally {
+		globalThis.fetch = origFetch;
+	}
+});
+
+test("path-style buckets put the bucket in the path", async () => {
+	assert.deepEqual(bucketAddress({ bucket: "mail", endpoint: "minio.example.com:9000", pathStyle: true }), { host: "minio.example.com:9000", prefix: "/mail" });
+	assert.deepEqual(bucketAddress({ bucket: "mail", endpoint: "s3.us-east-1.amazonaws.com" }), { host: "mail.s3.us-east-1.amazonaws.com", prefix: "" });
+	const seen = [];
+	const origFetch = globalThis.fetch;
+	globalThis.fetch = async (input) => { seen.push(new URL(typeof input === "string" ? input : input.href ?? input.url)); return new Response("", { status: 200, headers: { ETag: '"e"' } }); };
+	try {
+		await new B2Bucket({ keyId: "k", applicationKey: "s", bucket: "mail", endpoint: "minio.example.com", region: "us-east-1", pathStyle: true }).put("raw/a.eml", "x");
+		assert.equal(seen[0].host, "minio.example.com");
+		assert.equal(seen[0].pathname, "/mail/raw/a.eml");
+	} finally {
+		globalThis.fetch = origFetch;
+	}
+});
+
+test("custom endpoints are normalized and imply a region where they name one", () => {
+	assert.equal(normalizeStorageEndpoint("https://S3.us-west-004.backblazeb2.com/"), "s3.us-west-004.backblazeb2.com");
+	assert.equal(normalizeStorageEndpoint("minio.example.com:9000"), "minio.example.com:9000");
+	assert.equal(normalizeStorageEndpoint("not a host"), null);
+	assert.equal(normalizeStorageEndpoint("bucket.example.com/path"), null);
+	assert.equal(guessStorageRegion("abc123.r2.cloudflarestorage.com"), "auto");
+	assert.equal(guessStorageRegion("s3.us-west-004.backblazeb2.com"), "us-west-004");
+	assert.equal(guessStorageRegion("s3.eu-central-1.amazonaws.com"), "eu-central-1");
+	assert.equal(guessStorageRegion("s3.ap-northeast-1.wasabisys.com"), "ap-northeast-1");
+	assert.equal(guessStorageRegion("nyc3.digitaloceanspaces.com"), "nyc3");
+	assert.equal(guessStorageRegion("minio.example.com"), null);
 });
 
 test("B2Bucket speaks S3: put, get, range, head, delete, multipart", async () => {
@@ -121,6 +193,4 @@ test("AWS S3 config uses S3_* with AWS_* credential fallback, and B2 wins", () =
 	assert.deepEqual(config, { keyId: "AK", applicationKey: "sk", bucket: "b", region: "eu-west-2", endpoint: "s3.eu-west-2.amazonaws.com" });
 	assert.equal(getS3Config({ S3_BUCKET: "b", S3_REGION: "nope", S3_ACCESS_KEY_ID: "a", S3_SECRET_ACCESS_KEY: "b" }), null);
 	assert.match(describeB2Problem({ S3_BUCKET: "b" }), /AWS S3 needs/);
-	const both = withStorage({ BUCKET: "r2", S3_BUCKET: "b", S3_REGION: "us-east-1", S3_ACCESS_KEY_ID: "a", S3_SECRET_ACCESS_KEY: "s" });
-	assert.notEqual(both.BUCKET, "r2");
 });

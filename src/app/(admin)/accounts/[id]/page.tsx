@@ -9,6 +9,8 @@ import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { ProgressiveAvatarImage } from "@/components/progressive-avatar-image";
 import { Label } from "@/components/ui/label";
+import { FormField } from "@/components/ui/form";
+import { PageHeader } from "@/components/shared/page-header";
 import type { ManagedAccount } from "./types";
 import {
 	fetchManagedAccount,
@@ -60,10 +62,7 @@ export default function AccountDetailsPage() {
 
 	return (
 		<div className="space-y-6">
-			<div>
-				<h1 className="text-2xl md:text-3xl font-medium text-neutral-900">{t("account.detailsTitle")}</h1>
-				<p className="mt-2 text-sm text-neutral-500">{t("account.detailsDescription")}</p>
-			</div>
+			<PageHeader title={t("account.detailsTitle")} description={t("account.detailsDescription")} />
 			<section className="space-y-5 rounded-3xl bg-white p-6">
 				{!account.editable && (
 					<p className="rounded-2xl bg-neutral-50 p-4 text-sm text-neutral-500">
@@ -83,20 +82,17 @@ export default function AccountDetailsPage() {
 								<Upload className="h-4 w-4" />
 								{t("account.changeAvatar")}
 							</span>
-							<Input type="file" accept="image/jpeg,image/png,image/webp,image/gif" className="sr-only" onChange={(event) => void uploadAvatar(event.target.files?.[0])} />
+							<Input variant="bare" type="file" accept="image/jpeg,image/png,image/webp,image/gif" className="sr-only" onChange={(event) => void uploadAvatar(event.target.files?.[0])} />
 						</Label>
 					)}
 				</div>
-				<div className="space-y-2">
-					<Label htmlFor="account-email">{t("auth.email")}</Label>
+				<FormField label={t("auth.email")} htmlFor="account-email">
 					<Input id="account-email" value={account.email} readOnly className="bg-neutral-50 text-neutral-500" />
-				</div>
-				<div className="space-y-2">
-					<Label htmlFor="account-name">{t("common.name")}</Label>
+				</FormField>
+				<FormField label={t("common.name")} htmlFor="account-name">
 					<Input id="account-name" value={account.name} disabled={!account.editable} onChange={(event) => setAccount({ ...account, name: event.target.value })} />
-				</div>
-				{account.canForwardEmail && <div className="space-y-2">
-					<Label htmlFor="forwarding-email">{t("account.forwardingOptional")}</Label>
+				</FormField>
+				{account.canForwardEmail && <FormField label={t("account.forwardingOptional")} htmlFor="forwarding-email" description={t("settings.forwarding.hint")}>
 					<Input
 						id="forwarding-email"
 						type="email"
@@ -105,10 +101,7 @@ export default function AccountDetailsPage() {
 						onChange={(event) => setAccount({ ...account, forwardingEmail: event.target.value || null })}
 						placeholder="destination@example.com"
 					/>
-					<p className="text-xs leading-5 text-neutral-500">
-						{t("settings.forwarding.hint")}
-					</p>
-				</div>}
+				</FormField>}
 				<div className="flex items-center justify-between gap-4 rounded-2xl border border-neutral-200 bg-neutral-50 p-4">
 					<div className="space-y-1">
 						<Label htmlFor="account-enabled" className="font-semibold text-neutral-900">{t("account.enabled")}</Label>

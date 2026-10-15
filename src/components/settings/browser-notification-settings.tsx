@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useLanguage } from "@/components/language-provider";
+import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import {
 	areBrowserNotificationsEnabled,
@@ -30,7 +31,7 @@ export function BrowserNotificationSettings() {
 
 	return (
 		<div>
-			<label className="flex items-start gap-3 rounded-xl bg-neutral-50 p-4">
+			<Label className="flex items-start gap-3 rounded-xl bg-neutral-50 p-4 font-normal leading-normal">
 				<span className="flex-1">
 					<span className="block text-sm font-medium text-neutral-900">{t("settings.notifications.title")}</span>
 					<span className="mt-1 block text-sm text-neutral-500">
@@ -65,7 +66,7 @@ export function BrowserNotificationSettings() {
 					}}
 					aria-label={t("settings.notifications.enable")}
 				/>
-			</label>
+			</Label>
 			{permission === "denied" && (
 				<p className="mt-2 px-4 text-sm text-neutral-500">{t("settings.notifications.blocked")}</p>
 			)}

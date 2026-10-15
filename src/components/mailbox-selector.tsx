@@ -3,8 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { CalendarDays, Check, HardDrive, ChevronDown, Inbox, LogOut, Settings, ShieldCheck, UserPlus, UserRound, UsersRound } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
-import { useDismissible } from "@/components/use-dismissible";
+import { useEffect, useState } from "react";
 import { useLanguage } from "@/components/language-provider";
 import { useSelectedMailbox } from "@/components/mailbox-provider";
 import { ProgressiveAvatarImage } from "@/components/progressive-avatar-image";
@@ -22,6 +21,8 @@ import { PROFILE_NAME_CHANGED_EVENT } from "@/lib/profile/name-client";
 import type { ProfileAvatarChangedDetail, ProfileNameChangedDetail } from "@/lib/profile/types";
 import { MAILBOX_AVATAR_CHANGED_EVENT } from "@/lib/mailboxes/avatar-client";
 import type { MailboxAvatarChangedDetail } from "@/lib/mailboxes/avatar-client-types";
+import { Button } from "@/components/ui/button";
+import { Popover } from "@/components/ui/popover";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip } from "@/components/ui/tooltip";
 import type {
@@ -83,7 +84,8 @@ function MailboxAccountRow({ mailbox, unread, avatarUrl, onSelect }: MailboxAcco
 	const name = getMailboxName(mailbox);
 
 	return (
-		<button
+		<Button
+			variant="unstyled"
 			type="button"
 			onClick={onSelect}
 			className="flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left transition-colors hover:bg-white"
@@ -112,7 +114,7 @@ function MailboxAccountRow({ mailbox, unread, avatarUrl, onSelect }: MailboxAcco
 					{unread > 99 ? "99+" : unread}
 				</span>
 			)}
-		</button>
+		</Button>
 	);
 }
 
@@ -140,10 +142,7 @@ export function MailboxSelector({ initialUser }: MailboxSelectorProps = {}) {
 		};
 	}, [open]);
 	const otherAccounts = browserAccounts.filter((account) => !account.active && account.userId !== user?.id);
-	const ref = useRef<HTMLDivElement>(null);
 	const { counts } = useMessageCounts(null, open);
-
-	useDismissible(open, () => setOpen(false), ref);
 
 	useEffect(() => {
 		authFetch("/api/auth/me", { redirectOnUnauthorized: false })
@@ -238,177 +237,183 @@ export function MailboxSelector({ initialUser }: MailboxSelectorProps = {}) {
 	}
 
 	return (
-		<div ref={ref} className="relative">
-			<button
-				type="button"
-				onClick={() => setOpen((value) => !value)}
-				className="rounded-full p-1 transition-colors hover:bg-neutral-200"
-				aria-label={t("account.openMenu")}
-				aria-expanded={open}
-			>
-				<AccountAvatar
-					name={selectedName}
-					colorSeed={selectedEmail || selectedName}
-					hasAvatar={selectedHasAvatar}
-					avatarUrl={selectedAvatarUrl}
-					onAvatarError={() => {
-						if (!selectedMailbox) setHasAvatar(false);
-					}}
-				/>
-			</button>
+		<Popover
+			open={open}
+			onOpenChange={setOpen}
+			align="end"
+			offset={8}
+			ariaLabel={t("account.openMenu")}
+			className="w-[360px] max-h-[82vh] overflow-hidden overflow-y-auto rounded-[28px] border-neutral-200 bg-[#eef3fb] p-3 text-base shadow-2xl shadow-neutral-900/20"
+			trigger={
+				<Button
+					variant="unstyled"
+					type="button"
+					className="rounded-full p-1 transition-colors hover:bg-neutral-200"
+					aria-label={t("account.openMenu")}
+				>
+					<AccountAvatar
+						name={selectedName}
+						colorSeed={selectedEmail || selectedName}
+						hasAvatar={selectedHasAvatar}
+						avatarUrl={selectedAvatarUrl}
+						onAvatarError={() => {
+							if (!selectedMailbox) setHasAvatar(false);
+						}}
+					/>
+				</Button>
+			}
+		>
+			<div className="rounded-[22px] bg-white px-5 py-5">
+				<div className="flex items-center gap-4">
+					<AccountAvatar
+						name={selectedName}
+						colorSeed={selectedEmail || selectedName}
+						hasAvatar={selectedHasAvatar}
+						avatarUrl={selectedAvatarUrl}
+						size="large"
+						onAvatarError={() => {
+							if (!selectedMailbox) setHasAvatar(false);
+						}}
+					/>
+					<div className="min-w-0 flex-1">
+						<div className="flex items-center gap-2">
+							<p className="truncate text-lg font-semibold text-neutral-900">{selectedName}</p>
+							{selectedMailbox?.type === "shared" && (
+								<Tooltip label={t("account.sharedInbox")}>
+									<span title={t("account.sharedInbox")} aria-label={t("account.sharedInbox")} className="shrink-0 text-blue-600">
+										<UsersRound className="h-4 w-4" />
+									</span>
+								</Tooltip>
+							)}
+						</div>
+						<p className="truncate text-sm text-neutral-500">
+							{selectedEmail}
+						</p>
+					</div>
+					<Check className="h-5 w-5 shrink-0 text-blue-600" />
+				</div>
+				<Link
+					href="/inbox"
+					onClick={() => setOpen(false)}
+					className="mt-4 flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-neutral-700 hover:bg-[#f2f6fc]"
+				>
+					<Inbox size={18} className="text-neutral-600" />
+					{t("navigation.inbox")}
+				</Link>
+				<Link
+					href="/calendar"
+					onClick={() => setOpen(false)}
+					className="mt-1 flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-neutral-700 hover:bg-[#f2f6fc]"
+				>
+					<CalendarDays size={18} className="text-neutral-600" />
+					{t("account.calendar")}
+				</Link>
+				<Link
+					href="/drive"
+					onClick={() => setOpen(false)}
+					className="mt-1 flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-neutral-700 hover:bg-[#f2f6fc]"
+				>
+					<HardDrive size={18} className="text-neutral-600" />
+					{t("account.drive")}
+				</Link>
+				<Link
+					href="/settings/account"
+					onClick={() => setOpen(false)}
+					className="mt-1 flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-neutral-700 hover:bg-[#f2f6fc]"
+				>
+					<Settings size={18} className="text-neutral-600" />
+					{t("account.settings")}
+				</Link>
+				{otherMailboxes.length > 0 && (
+					<div className="mt-3 border-t border-neutral-100 pt-2">
+						<Button
+							variant="unstyled"
+							type="button"
+							onClick={() => setInboxesOpen((value) => !value)}
+							aria-expanded={inboxesOpen}
+							className="flex w-full items-center justify-between rounded-xl px-3 py-2 text-xs font-semibold uppercase tracking-wide text-neutral-500 hover:bg-[#f2f6fc]"
+						>
+							{t("account.inboxes", { count: otherMailboxes.length })}
+							<ChevronDown size={16} className={`transition-transform ${inboxesOpen ? "rotate-180" : ""}`} />
+						</Button>
+						{inboxesOpen && otherMailboxes.map((mailbox) => {
+							const mailboxCount = counts.mailboxes.find((count) => count.mailboxId === mailbox.id);
+							return (
+								<MailboxAccountRow
+									key={mailbox.id}
+									mailbox={mailbox}
+									unread={mailboxCount?.unread ?? 0}
+									avatarUrl={mailboxAvatarUrls[mailbox.id]}
+									onSelect={() => {
+										setSelectedMailbox(mailbox);
+										setOpen(false);
+										router.push("/inbox");
+									}}
+								/>
+							);
+						})}
+					</div>
+				)}
+			</div>
 
-			{open && (
-				<div className="absolute right-0 top-14 w-[360px] overflow-hidden rounded-[28px] border border-neutral-200 bg-[#eef3fb] p-3 shadow-2xl shadow-neutral-900/20 max-h-[82vh] overflow-y-auto z-90">
-					<div className="rounded-[22px] bg-white px-5 py-5">
-						<div className="flex items-center gap-4">
+			{otherAccounts.length > 0 && (
+				<div className="mt-2 rounded-[22px] bg-white/55 p-1">
+					<p className="px-4 pb-1 pt-3 text-xs font-semibold uppercase tracking-wide text-neutral-500">
+						{t("account.otherAccounts")}
+					</p>
+					{otherAccounts.map((account) => (
+						<Button
+							variant="unstyled"
+							key={account.userId}
+							type="button"
+							onClick={() => void switchAccount(account.userId)}
+							className="flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left transition-colors hover:bg-white"
+						>
 							<AccountAvatar
-								name={selectedName}
-								colorSeed={selectedEmail || selectedName}
-								hasAvatar={selectedHasAvatar}
-								avatarUrl={selectedAvatarUrl}
-								size="large"
-								onAvatarError={() => {
-									if (!selectedMailbox) setHasAvatar(false);
-								}}
+								name={account.name}
+								colorSeed={account.email}
+								hasAvatar={account.hasAvatar}
+								avatarUrl={`/api/auth/accounts/${account.userId}/avatar`}
 							/>
 							<div className="min-w-0 flex-1">
-								<div className="flex items-center gap-2">
-									<p className="truncate text-lg font-semibold text-neutral-900">{selectedName}</p>
-									{selectedMailbox?.type === "shared" && (
-										<Tooltip label={t("account.sharedInbox")}>
-											<span title={t("account.sharedInbox")} aria-label={t("account.sharedInbox")} className="shrink-0 text-blue-600">
-												<UsersRound className="h-4 w-4" />
-											</span>
-										</Tooltip>
-									)}
-								</div>
-								<p className="truncate text-sm text-neutral-500">
-									{selectedEmail}
-								</p>
+								<p className="truncate text-sm font-semibold text-neutral-900">{account.name}</p>
+								<p className="truncate text-xs text-neutral-500">{account.email}</p>
 							</div>
-							<Check className="h-5 w-5 shrink-0 text-blue-600" />
-						</div>
-						<Link
-							href="/inbox"
-							onClick={() => setOpen(false)}
-							className="mt-4 flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-neutral-700 hover:bg-[#f2f6fc]"
-						>
-							<Inbox size={18} className="text-neutral-600" />
-							{t("navigation.inbox")}
-						</Link>
-						<Link
-							href="/calendar"
-							onClick={() => setOpen(false)}
-							className="mt-1 flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-neutral-700 hover:bg-[#f2f6fc]"
-						>
-							<CalendarDays size={18} className="text-neutral-600" />
-							{t("account.calendar")}
-						</Link>
-						<Link
-							href="/drive"
-							onClick={() => setOpen(false)}
-							className="mt-1 flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-neutral-700 hover:bg-[#f2f6fc]"
-						>
-							<HardDrive size={18} className="text-neutral-600" />
-							{t("account.drive")}
-						</Link>
-						<Link
-							href="/settings/account"
-							onClick={() => setOpen(false)}
-							className="mt-1 flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-neutral-700 hover:bg-[#f2f6fc]"
-						>
-							<Settings size={18} className="text-neutral-600" />
-							{t("account.settings")}
-						</Link>
-						{otherMailboxes.length > 0 && (
-							<div className="mt-3 border-t border-neutral-100 pt-2">
-								<button
-									type="button"
-									onClick={() => setInboxesOpen((value) => !value)}
-									aria-expanded={inboxesOpen}
-									className="flex w-full items-center justify-between rounded-xl px-3 py-2 text-xs font-semibold uppercase tracking-wide text-neutral-500 hover:bg-[#f2f6fc]"
-								>
-									{t("account.inboxes", { count: otherMailboxes.length })}
-									<ChevronDown size={16} className={`transition-transform ${inboxesOpen ? "rotate-180" : ""}`} />
-								</button>
-								{inboxesOpen && otherMailboxes.map((mailbox) => {
-									const mailboxCount = counts.mailboxes.find((count) => count.mailboxId === mailbox.id);
-									return (
-										<MailboxAccountRow
-											key={mailbox.id}
-											mailbox={mailbox}
-											unread={mailboxCount?.unread ?? 0}
-											avatarUrl={mailboxAvatarUrls[mailbox.id]}
-											onSelect={() => {
-												setSelectedMailbox(mailbox);
-												setOpen(false);
-												router.push("/inbox");
-											}}
-										/>
-									);
-								})}
-							</div>
-						)}
-					</div>
-
-					{otherAccounts.length > 0 && (
-						<div className="mt-2 rounded-[22px] bg-white/55 p-1">
-							<p className="px-4 pb-1 pt-3 text-xs font-semibold uppercase tracking-wide text-neutral-500">
-								{t("account.otherAccounts")}
-							</p>
-							{otherAccounts.map((account) => (
-								<button
-									key={account.userId}
-									type="button"
-									onClick={() => void switchAccount(account.userId)}
-									className="flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left transition-colors hover:bg-white"
-								>
-									<AccountAvatar
-										name={account.name}
-										colorSeed={account.email}
-										hasAvatar={account.hasAvatar}
-										avatarUrl={`/api/auth/accounts/${account.userId}/avatar`}
-									/>
-									<div className="min-w-0 flex-1">
-										<p className="truncate text-sm font-semibold text-neutral-900">{account.name}</p>
-										<p className="truncate text-xs text-neutral-500">{account.email}</p>
-									</div>
-								</button>
-							))}
-						</div>
-					)}
-
-					<div className="mt-2 overflow-hidden rounded-[22px] bg-white">
-						{user?.role === "admin" && (
-							<Link
-								href="/admin"
-								onClick={() => setOpen(false)}
-								className={`flex items-center gap-3 border-t border-neutral-100 px-5 py-4 text-sm font-medium text-neutral-800 hover:bg-[#f2f6fc] ${adminActive ? "bg-blue-50" : ""}`}
-							>
-								<ShieldCheck size={18} className="text-neutral-600" />
-								{t("account.admin")}
-								{adminActive && <Check className="ml-auto h-4 w-4 text-blue-600" />}
-							</Link>
-						)}
-						<Link
-							href="/login?add=1"
-							onClick={() => setOpen(false)}
-							className="flex items-center gap-3 px-5 py-4 text-sm font-medium text-neutral-800 hover:bg-[#f2f6fc]"
-						>
-							<UserPlus size={18} className="text-neutral-600" />
-							{t("account.addAnother")}
-						</Link>
-						<button
-							type="button"
-							onClick={logout}
-							className="flex w-full items-center gap-3 border-t border-neutral-100 px-5 py-4 text-left text-sm font-medium text-neutral-800 hover:bg-[#f2f6fc]"
-						>
-							<LogOut size={18} className="text-neutral-600" />
-							{t("account.signOut")}
-						</button>
-					</div>
+						</Button>
+					))}
 				</div>
 			)}
-		</div>
+
+			<div className="mt-2 overflow-hidden rounded-[22px] bg-white">
+				{user?.role === "admin" && (
+					<Link
+						href="/admin"
+						onClick={() => setOpen(false)}
+						className={`flex items-center gap-3 border-t border-neutral-100 px-5 py-4 text-sm font-medium text-neutral-800 hover:bg-[#f2f6fc] ${adminActive ? "bg-blue-50" : ""}`}
+					>
+						<ShieldCheck size={18} className="text-neutral-600" />
+						{t("account.admin")}
+						{adminActive && <Check className="ml-auto h-4 w-4 text-blue-600" />}
+					</Link>
+				)}
+				<Link
+					href="/login?add=1"
+					onClick={() => setOpen(false)}
+					className="flex items-center gap-3 px-5 py-4 text-sm font-medium text-neutral-800 hover:bg-[#f2f6fc]"
+				>
+					<UserPlus size={18} className="text-neutral-600" />
+					{t("account.addAnother")}
+				</Link>
+				<Button
+					variant="unstyled"
+					type="button"
+					onClick={logout}
+					className="flex w-full items-center gap-3 border-t border-neutral-100 px-5 py-4 text-left text-sm font-medium text-neutral-800 hover:bg-[#f2f6fc]"
+				>
+					<LogOut size={18} className="text-neutral-600" />
+					{t("account.signOut")}
+				</Button>
+			</div>
+		</Popover>
 	);
 }

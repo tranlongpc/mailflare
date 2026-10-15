@@ -1,6 +1,7 @@
 "use client";
 
 import { useLanguage } from "@/components/language-provider";
+import { Button } from "@/components/ui/button";
 import { useEffect, useRef, useState } from "react";
 import { prepareEmailHtml } from "@/lib/email/html";
 import { collapseQuotedEmailHtml } from "@/app/(dashboard)/inbox/[messageId]/quote-collapse-utils";
@@ -71,13 +72,13 @@ export function EmailHtmlRenderer({ html, className, preserveLeadingQuote = fals
 	}, [html, allowRemote, preserveLeadingQuote, quoteToggleLabel]);
 	return <div className={`min-w-0 max-w-full ${className ?? ""}`}>
 		{hasRemote && <div className="mb-2 flex justify-end">
-			<button type="button" aria-pressed={allowRemote} className="rounded px-2 py-1 text-xs text-blue-600 hover:bg-blue-50"
+			<Button type="button" variant="unstyled" aria-pressed={allowRemote} className="rounded px-2 py-1 text-xs text-blue-600 hover:bg-blue-50"
 				onClick={() => {
 					if (!allowRemote) onAllowRemote?.();
 					setChoice({ source: html, allow: !allowRemote });
 				}}>
 				{allowRemote ? null : t("message.allowRemote")}
-			</button>
+			</Button>
 		</div>}
 		<div className="max-w-full overflow-x-auto" ref={host} />
 	</div>;

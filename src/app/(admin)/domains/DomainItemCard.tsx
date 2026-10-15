@@ -1,6 +1,6 @@
 import { Fragment } from "react";
 import { useLanguage } from "@/components/language-provider";
-import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
+import { RowTools } from "@/components/shared/row-tools";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ListRow } from "@/components/ui/list";
@@ -14,7 +14,6 @@ import {
   ChevronDown,
   ChevronRight,
   Globe2,
-  MoreVertical,
   Trash2,
 } from "lucide-react";
 import type { DomainItemCardProps } from "./types";
@@ -128,7 +127,8 @@ export default function DomainItemCard({
                 </Fragment>
               ))}
             <span className="flex-1" />
-            <button
+            <Button
+              variant="unstyled"
               onClick={() => onToggleDns(item.id)}
               className="flex cursor-pointer items-center gap-0.5 text-xs text-blue-600 hover:text-blue-800"
             >
@@ -141,7 +141,7 @@ export default function DomainItemCard({
                   {t("domains.showDetails")} <ChevronDown className="h-3 w-3" />
                 </>
               )}
-            </button>
+            </Button>
           </div>
         </div>
       </div>
@@ -170,41 +170,28 @@ export default function DomainItemCard({
           <DomainDnsSkeleton />
         ) : null)}
 
-      <DropdownMenu.Root>
-        <DropdownMenu.Trigger asChild>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="absolute right-4 top-4 h-8 w-8 p-0"
-            disabled={remove.isPending}
-            aria-label={t("domains.actionsFor", { host: item.hostname })}
-          >
-            <MoreVertical className="h-4 w-4" />
-          </Button>
-        </DropdownMenu.Trigger>
-        <DropdownMenu.Portal>
-          <DropdownMenu.Content
-            align="end"
-            sideOffset={6}
-            className="z-50 min-w-40 rounded-lg border border-neutral-200 bg-white p-1 text-sm shadow-lg"
-          >
-            <DropdownMenu.Item
-              disabled={remove.isPending}
-              onSelect={() => {
+      <div className="absolute right-4 top-4">
+        <RowTools
+          label={t("domains.actionsFor", { host: item.hostname })}
+          disabled={remove.isPending}
+          tools={[
+            {
+              key: "remove",
+              icon: <Trash2 className="h-4 w-4" />,
+              label: t("domains.removeDomain"),
+              destructive: true,
+              disabled: remove.isPending,
+              onSelect: () => {
                 // Removing a domain deletes its mailboxes (and all their mail)
                 // and disables Email Routing on the zone, so require the hostname.
                 const typed = window.prompt(t("domains.removeConfirm", { host: item.hostname }));
                 if (typed?.trim().toLowerCase() !== item.hostname.toLowerCase()) return;
                 remove.mutate(item.id);
-              }}
-              className="flex cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-red-600 outline-none hover:bg-red-50 focus:bg-red-50 data-[disabled]:pointer-events-none data-[disabled]:opacity-50"
-            >
-              <Trash2 className="h-4 w-4" />
-              {t("domains.removeDomain")}
-            </DropdownMenu.Item>
-          </DropdownMenu.Content>
-        </DropdownMenu.Portal>
-      </DropdownMenu.Root>
+              },
+            },
+          ]}
+        />
+      </div>
     </ListRow>
   );
 }

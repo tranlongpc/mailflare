@@ -6,14 +6,8 @@ import { Ban, Forward, Inbox, Info, Pencil, Plus, Trash2 } from "lucide-react";
 import { useLanguage } from "@/components/language-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-	Dialog,
-	DialogContent,
-	DialogDescription,
-	DialogHeader,
-	DialogTitle,
-} from "@/components/ui/dialog";
+import { Card } from "@/components/ui/card";
+import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RoutingRuleSelect } from "./routing-rule-select";
@@ -117,9 +111,9 @@ export function DomainRouting({ domain }: DomainRoutingProps = {}) {
 					<div className="flex items-center gap-2">
 						<h2 className="text-2xl font-semibold">{t("routing.title")}</h2>
 						<Tooltip label={t("routing.about")}>
-							<button type="button" aria-label={t("routing.aboutLabel")} className="text-neutral-400 hover:text-neutral-700">
+							<Button variant="unstyled" type="button" aria-label={t("routing.aboutLabel")} className="text-neutral-400 hover:text-neutral-700">
 								<Info className="h-4 w-4" />
-							</button>
+							</Button>
 						</Tooltip>
 					</div>
 					<p className="mt-1 text-sm text-neutral-500">{t("routing.rulesFor", { host: hostname || t("routing.selectInbox") })}</p>
@@ -134,16 +128,12 @@ export function DomainRouting({ domain }: DomainRoutingProps = {}) {
 			{(!domain && isMailboxLoading) || rules.isLoading ? (
 				<CardGridSkeleton />
 			) : !domain && !mailboxId ? (
-				<Card>
-					<CardContent className="pt-6 text-sm text-neutral-500">
-						{t("routing.selectInboxFirst")}
-					</CardContent>
+				<Card variant="section" padding={false} contentClassName="pt-6 text-sm text-neutral-500">
+					{t("routing.selectInboxFirst")}
 				</Card>
 			) : !canManage ? (
-				<Card>
-					<CardContent className="pt-6 text-sm text-neutral-500">
-						{t("routing.needFullAccess")}
-					</CardContent>
+				<Card variant="section" padding={false} contentClassName="pt-6 text-sm text-neutral-500">
+					{t("routing.needFullAccess")}
 				</Card>
 			) : (
 				<div className="space-y-1 overflow-hidden rounded-3xl">
@@ -172,199 +162,178 @@ export function DomainRouting({ domain }: DomainRoutingProps = {}) {
 				</div>
 			)}
 
-			<Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-				{/* The form grows when the action changes, so the dialog must scroll rather than overflow the viewport. */}
-				<DialogContent className="max-h-[calc(100vh-4rem)] overflow-y-auto sm:max-w-[560px]">
-					<DialogHeader>
-						<DialogTitle>{editing ? t("routing.editRule") : t("routing.addRule")}</DialogTitle>
-						<DialogDescription>{t("routing.dialogDescription")}</DialogDescription>
-					</DialogHeader>
+			<Dialog
+				open={dialogOpen}
+				onOpenChange={setDialogOpen}
+				title={editing ? t("routing.editRule") : t("routing.addRule")}
+				description={t("routing.dialogDescription")}
+			>
+				<form
+					className="space-y-4"
+					onSubmit={(e) => {
+						e.preventDefault();
+						save.mutate();
+					}}
+				>
+					<div className="grid grid-cols-1 items-end gap-4 sm:grid-cols-2">
+					<div className="grid min-w-0 gap-2">
+						<Label htmlFor="rule-name">{t("common.name")}</Label>
+						<Input
+							id="rule-name"
+							value={form.name ?? ""}
+							placeholder={t("routing.optionalLabel")}
+							onChange={(e) => setForm({ ...form, name: e.target.value })}
+						/>
+					</div>
 
-					<form
-						className="space-y-4"
-						onSubmit={(e) => {
-							e.preventDefault();
-							save.mutate();
-						}}
-					>
-						<div className="grid grid-cols-1 items-end gap-4 sm:grid-cols-2">
+					<div className="grid min-w-0 gap-2">
+						<Label htmlFor="rule-action">{t("routing.action")}</Label>
+						<RoutingRuleSelect
+							id="rule-action"
+							value={form.action}
+							onValueChange={(value) =>
+								setForm({ ...form, action: value as DomainRuleInput["action"] })
+							}
+							options={Object.entries(ACTION_LABELS).map(([value, label]) => ({ value, label: t(label) }))}
+						/>
+					</div>
+					</div>
+
+					<div className="grid grid-cols-1 items-end gap-4 sm:grid-cols-2">
 						<div className="grid min-w-0 gap-2">
-							<Label htmlFor="rule-name">{t("common.name")}</Label>
-							<Input
-								id="rule-name"
-								value={form.name ?? ""}
-								placeholder={t("routing.optionalLabel")}
-								onChange={(e) => setForm({ ...form, name: e.target.value })}
+							<Label htmlFor="rule-field">{t("routing.matchOn")}</Label>
+							<RoutingRuleSelect
+								id="rule-field"
+								value={form.matchField}
+								onValueChange={(value) =>
+									setForm({ ...form, matchField: value as DomainRuleInput["matchField"] })
+								}
+								options={Object.entries(MATCH_FIELD_LABELS).map(([value, label]) => ({ value, label: t(label) }))}
 							/>
 						</div>
-
 						<div className="grid min-w-0 gap-2">
-							<Label htmlFor="rule-action">{t("routing.action")}</Label>
+							<Label htmlFor="rule-operator">{t("routing.condition")}</Label>
 							<RoutingRuleSelect
-								id="rule-action"
-								value={form.action}
-								onChange={(e) =>
-									setForm({ ...form, action: e.target.value as DomainRuleInput["action"] })
+								id="rule-operator"
+								value={form.matchOperator}
+								onValueChange={(value) =>
+									setForm({
+										...form,
+										matchOperator: value as DomainRuleInput["matchOperator"],
+									})
 								}
-							>
-								{Object.entries(ACTION_LABELS).map(([value, label]) => (
-									<option key={value} value={value}>
-										{t(label)}
-									</option>
-								))}
-							</RoutingRuleSelect>
+								options={Object.entries(MATCH_OPERATOR_LABELS).map(([value, label]) => ({ value, label: t(label) }))}
+							/>
 						</div>
+					</div>
+
+					<div className="grid grid-cols-1 items-end gap-4 sm:grid-cols-2">
+						<div className="grid min-w-0 gap-2">
+							<div className="flex items-center gap-2">
+								<Label htmlFor="rule-value">{t("routing.matchValue")}</Label>
+								<Tooltip label={t("routing.matchAllHint")}>
+									<Button variant="unstyled" type="button" aria-label={t("routing.matchAllHint")} className="text-neutral-500"><Info className="h-4 w-4" /></Button>
+								</Tooltip>
+							</div>
+							<Input
+								id="rule-value"
+								required
+								value={form.matchValue}
+								placeholder={t("routing.matchAllPlaceholder")}
+								onChange={(e) => setForm({ ...form, matchValue: e.target.value })}
+							/>
 						</div>
-
-						<div className="grid grid-cols-1 items-end gap-4 sm:grid-cols-2">
-							<div className="grid min-w-0 gap-2">
-								<Label htmlFor="rule-field">{t("routing.matchOn")}</Label>
-								<RoutingRuleSelect
-									id="rule-field"
-									value={form.matchField}
-									onChange={(e) =>
-										setForm({ ...form, matchField: e.target.value as DomainRuleInput["matchField"] })
-									}
-								>
-									{Object.entries(MATCH_FIELD_LABELS).map(([value, label]) => (
-										<option key={value} value={value}>
-											{t(label)}
-										</option>
-									))}
-								</RoutingRuleSelect>
+						<div className="grid min-w-0 gap-2">
+							<div className="flex items-center gap-2">
+								<Label htmlFor="rule-priority">{t("routing.priority")}</Label>
+								<Tooltip label={t("routing.priorityHint")}>
+									<Button variant="unstyled" type="button" aria-label={t("routing.priorityHint")} className="text-neutral-500"><Info className="h-4 w-4" /></Button>
+								</Tooltip>
 							</div>
-							<div className="grid min-w-0 gap-2">
-								<Label htmlFor="rule-operator">{t("routing.condition")}</Label>
-								<RoutingRuleSelect
-									id="rule-operator"
-									value={form.matchOperator}
-									onChange={(e) =>
-										setForm({
-											...form,
-											matchOperator: e.target.value as DomainRuleInput["matchOperator"],
-										})
-									}
-								>
-									{Object.entries(MATCH_OPERATOR_LABELS).map(([value, label]) => (
-										<option key={value} value={value}>
-											{t(label)}
-										</option>
-									))}
-								</RoutingRuleSelect>
-							</div>
+							<Input
+								id="rule-priority"
+								type="number"
+								min={0}
+								max={1000}
+								value={form.priority}
+								onChange={(e) => setForm({ ...form, priority: Number(e.target.value) })}
+							/>
 						</div>
+					</div>
 
-						<div className="grid grid-cols-1 items-end gap-4 sm:grid-cols-2">
-							<div className="grid min-w-0 gap-2">
-								<div className="flex items-center gap-2">
-									<Label htmlFor="rule-value">{t("routing.matchValue")}</Label>
-									<Tooltip label={t("routing.matchAllHint")}>
-										<button type="button" aria-label={t("routing.matchAllHint")} className="text-neutral-500"><Info className="h-4 w-4" /></button>
-									</Tooltip>
-								</div>
-								<Input
-									id="rule-value"
-									required
-									value={form.matchValue}
-									placeholder={t("routing.matchAllPlaceholder")}
-									onChange={(e) => setForm({ ...form, matchValue: e.target.value })}
-								/>
-							</div>
-							<div className="grid min-w-0 gap-2">
-								<div className="flex items-center gap-2">
-									<Label htmlFor="rule-priority">{t("routing.priority")}</Label>
-									<Tooltip label={t("routing.priorityHint")}>
-										<button type="button" aria-label={t("routing.priorityHint")} className="text-neutral-500"><Info className="h-4 w-4" /></button>
-									</Tooltip>
-								</div>
-								<Input
-									id="rule-priority"
-									type="number"
-									min={0}
-									max={1000}
-									value={form.priority}
-									onChange={(e) => setForm({ ...form, priority: Number(e.target.value) })}
-								/>
-							</div>
+					{form.action !== "reject" && (
+						<div className={form.action === "forward" ? "grid grid-cols-1 items-end gap-4 sm:grid-cols-2" : "grid min-w-0 gap-2"}>
+						<div className="grid min-w-0 gap-2">
+							<Label htmlFor="rule-mailbox">
+								{form.action === "forward" ? t("routing.keptCopyMailbox") : t("routing.destinationMailbox")}
+							</Label>
+							<RoutingRuleSelect
+								id="rule-mailbox"
+								value={form.mailboxId ?? ""}
+								onValueChange={(value) => setForm({ ...form, mailboxId: value || null })}
+								placeholder={t("routing.selectMailbox")}
+								options={mailboxes.map((mailbox) => ({
+									value: mailbox.id,
+									label: `${mailbox.localPart}@${hostname}${mailbox.disabled ? t("routing.disabledSuffix") : ""}`,
+								}))}
+							/>
 						</div>
-
-						{form.action !== "reject" && (
-							<div className={form.action === "forward" ? "grid grid-cols-1 items-end gap-4 sm:grid-cols-2" : "grid min-w-0 gap-2"}>
-							<div className="grid min-w-0 gap-2">
-								<Label htmlFor="rule-mailbox">
-									{form.action === "forward" ? t("routing.keptCopyMailbox") : t("routing.destinationMailbox")}
-								</Label>
-								<RoutingRuleSelect
-									id="rule-mailbox"
-									value={form.mailboxId ?? ""}
-									onChange={(e) => setForm({ ...form, mailboxId: e.target.value || null })}
-								>
-									<option value="">{t("routing.selectMailbox")}</option>
-									{mailboxes.map((mailbox) => (
-										<option key={mailbox.id} value={mailbox.id}>
-											{mailbox.localPart}@{hostname}
-											{mailbox.disabled ? t("routing.disabledSuffix") : ""}
-										</option>
-									))}
-								</RoutingRuleSelect>
-							</div>
-							{form.action === "forward" && (
-								<div className="grid min-w-0 gap-2">
-									<Label htmlFor="rule-forward">{t("routing.forwardTo")}</Label>
-									<Input
-										id="rule-forward"
-										type="email"
-										required
-										value={form.forwardTo ?? ""}
-										onChange={(e) => setForm({ ...form, forwardTo: e.target.value })}
-									/>
-								</div>
-							)}
-							</div>
-						)}
-
 						{form.action === "forward" && (
-							<div className="flex items-center justify-between rounded-lg border border-neutral-200 px-3 py-2">
-								<div>
-									<div className="flex items-center gap-2">
-										<p className="text-sm font-medium">{t("routing.keepCopy")}</p>
-										<Tooltip label={t("routing.keepCopyHint")}>
-											<button type="button" aria-label={t("routing.keepCopyHint")} className="text-neutral-500"><Info className="h-4 w-4" /></button>
-										</Tooltip>
-									</div>
-								</div>
-								<Switch
-									checked={form.keepCopy}
-									onCheckedChange={(keepCopy) => setForm({ ...form, keepCopy })}
-									aria-label={t("routing.keepCopy")}
-								/>
-							</div>
-						)}
-
-						{form.action === "reject" && (
 							<div className="grid min-w-0 gap-2">
-								<Label htmlFor="rule-reason">{t("routing.rejectReason")}</Label>
+								<Label htmlFor="rule-forward">{t("routing.forwardTo")}</Label>
 								<Input
-									id="rule-reason"
-									value={form.rejectReason ?? ""}
-									placeholder={t("routing.rejectPlaceholder")}
-									onChange={(e) => setForm({ ...form, rejectReason: e.target.value })}
+									id="rule-forward"
+									type="email"
+									required
+									value={form.forwardTo ?? ""}
+									onChange={(e) => setForm({ ...form, forwardTo: e.target.value })}
 								/>
 							</div>
 						)}
-
-						{error && <p role="alert" className="text-sm text-red-600">{error}</p>}
-
-						<div className="flex justify-end gap-2 border-t border-neutral-200 pt-4">
-							<Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
-								{t("common.cancel")}
-							</Button>
-							<Button type="submit" disabled={save.isPending}>
-								{editing ? t("rules.saveChanges") : t("rules.create")}
-							</Button>
 						</div>
-					</form>
-				</DialogContent>
+					)}
+
+					{form.action === "forward" && (
+						<div className="flex items-center justify-between rounded-lg border border-neutral-200 px-3 py-2">
+							<div>
+								<div className="flex items-center gap-2">
+									<p className="text-sm font-medium">{t("routing.keepCopy")}</p>
+									<Tooltip label={t("routing.keepCopyHint")}>
+										<Button variant="unstyled" type="button" aria-label={t("routing.keepCopyHint")} className="text-neutral-500"><Info className="h-4 w-4" /></Button>
+									</Tooltip>
+								</div>
+							</div>
+							<Switch
+								checked={form.keepCopy}
+								onCheckedChange={(keepCopy) => setForm({ ...form, keepCopy })}
+								aria-label={t("routing.keepCopy")}
+							/>
+						</div>
+					)}
+
+					{form.action === "reject" && (
+						<div className="grid min-w-0 gap-2">
+							<Label htmlFor="rule-reason">{t("routing.rejectReason")}</Label>
+							<Input
+								id="rule-reason"
+								value={form.rejectReason ?? ""}
+								placeholder={t("routing.rejectPlaceholder")}
+								onChange={(e) => setForm({ ...form, rejectReason: e.target.value })}
+							/>
+						</div>
+					)}
+
+					{error && <p role="alert" className="text-sm text-red-600">{error}</p>}
+
+					<div className="flex justify-end gap-2 border-t border-neutral-200 pt-4">
+						<Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
+							{t("common.cancel")}
+						</Button>
+						<Button type="submit" disabled={save.isPending}>
+							{editing ? t("rules.saveChanges") : t("rules.create")}
+						</Button>
+					</div>
+				</form>
 			</Dialog>
 		</div>
 	);
@@ -393,16 +362,16 @@ function RuleSection({
 }) {
 	const { t } = useLanguage();
 	return (
-		<Card className={`${className} border-0 bg-white px-6`}>
-			<CardHeader>
+		<Card variant="plain" padding={false} className={`${className} bg-white px-6`}>
+			<div className="flex flex-col gap-1.5 py-6">
 				<div className="flex items-center gap-2">
-					<CardTitle className="text-xs uppercase">{title}</CardTitle>
+					<h3 className="text-xs font-semibold uppercase leading-none">{title}</h3>
 					<Tooltip label={description}>
-						<button type="button" aria-label={description} className="text-neutral-500"><Info className="h-4 w-4" /></button>
+						<Button variant="unstyled" type="button" aria-label={description} className="text-neutral-500"><Info className="h-4 w-4" /></Button>
 					</Tooltip>
 				</div>
-			</CardHeader>
-			<CardContent className="space-y-2 pb-5">
+			</div>
+			<div className="space-y-2 pb-5">
 				{rules.length === 0 ? (
 					<p className="text-sm text-neutral-500">{t("routing.noRules")}</p>
 				) : (
@@ -442,7 +411,7 @@ function RuleSection({
 						);
 					})
 				)}
-			</CardContent>
+			</div>
 		</Card>
 	);
 }

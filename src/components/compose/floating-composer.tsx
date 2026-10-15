@@ -6,6 +6,7 @@ import { ComposeForm } from "@/components/compose/compose-form";
 import { useCompose } from "@/components/compose/compose-context";
 import { useSidebar } from "@/components/sidebar-state";
 import { useLanguage } from "@/components/language-provider";
+import { Button } from "@/components/ui/button";
 
 /** `showButton` adds the phone Compose button; only the dashboard pages (mail) pass it. */
 export function FloatingComposer({ showButton = false }: { showButton?: boolean }) {
@@ -17,7 +18,8 @@ export function FloatingComposer({ showButton = false }: { showButton?: boolean 
 	return (
 		<>
 			{showButton && !open && !mobileOpen && (
-				<button
+				<Button
+					variant="unstyled"
 					type="button"
 					onClick={openComposer}
 					aria-label={t("navigation.compose")}
@@ -25,7 +27,7 @@ export function FloatingComposer({ showButton = false }: { showButton?: boolean 
 				>
 					<MailPlus size={19} />
 					{t("navigation.compose")}
-				</button>
+				</Button>
 			)}
 			{notice && (
 				<div role="status" className="fixed right-6 top-6 z-[60] rounded-lg bg-green-600 px-4 py-3 text-sm font-medium text-white shadow-lg">

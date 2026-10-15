@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import {
   AlertTriangle,
   DatabaseBackup,
@@ -17,15 +16,12 @@ import {
 } from "lucide-react";
 import { useLanguage } from "@/components/language-provider";
 import { Badge } from "@/components/ui/badge";
+import { PageHeader } from "@/components/shared/page-header";
+import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Card } from "@/components/ui/card";
+import { Dialog } from "@/components/ui/dialog";
+import { DropdownMenu } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
@@ -116,19 +112,15 @@ export default function BackupsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-medium text-neutral-900">
-            {t("backups.title")}
-          </h1>
-          <p className="mt-1 text-sm text-neutral-500">
-            {t("backups.description")}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
+      <PageHeader
+        title={t("backups.title")}
+        description={t("backups.description")}
+        actions={
+        <>
           <Input
             ref={restoreInput}
             type="file"
+            variant="bare"
             accept="application/json,.json"
             className="hidden"
             onChange={(event) => {
@@ -142,34 +134,41 @@ export default function BackupsPage() {
             <Play size={18} />
             {runBackup.isPending ? t("backups.starting") : t("backups.backUp")}
           </Button>
-          <DropdownMenu.Root>
-            <DropdownMenu.Trigger asChild>
+          <DropdownMenu
+            align="end"
+            className="min-w-48"
+            trigger={
               <Button type="button" variant="outline" className="h-10 w-10 px-0" aria-label={t("backups.actions")}>
                 <MoreVertical className="h-4 w-4" />
               </Button>
-            </DropdownMenu.Trigger>
-            <DropdownMenu.Portal>
-              <DropdownMenu.Content align="end" sideOffset={6} className="z-50 min-w-48 rounded-lg border border-neutral-200 bg-white p-1 text-sm shadow-lg">
-                <DropdownMenu.Item disabled={restore.isPending} onSelect={() => restoreInput.current?.click()} className="flex cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-neutral-900 outline-none hover:bg-neutral-100 focus:bg-neutral-100 data-[disabled]:pointer-events-none data-[disabled]:opacity-50">
-                  <Upload className="h-4 w-4" />
-                  {restore.isPending ? t("backups.restoring") : t("backups.restore")}
-                </DropdownMenu.Item>
-                <DropdownMenu.Item disabled={!settings || autoSaveSettings.isPending} onSelect={() => setSettingsOpen(true)} className="flex cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-neutral-900 outline-none hover:bg-neutral-100 focus:bg-neutral-100 data-[disabled]:pointer-events-none data-[disabled]:opacity-50">
-                  <Settings className="h-4 w-4" />
-                  {t("backups.settings")}
-                </DropdownMenu.Item>
-              </DropdownMenu.Content>
-            </DropdownMenu.Portal>
-          </DropdownMenu.Root>
-        </div>
-      </div>
+            }
+            items={[
+              {
+                key: "restore",
+                icon: <Upload className="h-4 w-4" />,
+                label: restore.isPending ? t("backups.restoring") : t("backups.restore"),
+                disabled: restore.isPending,
+                onSelect: () => restoreInput.current?.click(),
+              },
+              {
+                key: "settings",
+                icon: <Settings className="h-4 w-4" />,
+                label: t("backups.settings"),
+                disabled: !settings || autoSaveSettings.isPending,
+                onSelect: () => setSettingsOpen(true),
+              },
+            ]}
+          />
+        </>
+        }
+      />
 
-      <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
-        <DialogContent className="max-h-[calc(100vh-4rem)] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{t("backups.tablesTitle")}</DialogTitle>
-            <DialogDescription>{t("backups.tablesDescription")}</DialogDescription>
-          </DialogHeader>
+      <Dialog
+        open={settingsOpen}
+        onOpenChange={setSettingsOpen}
+        title={t("backups.tablesTitle")}
+        description={t("backups.tablesDescription")}
+      >
           {settings && <div className="space-y-5">
             <div className="divide-y divide-neutral-100">
               {BACKUP_TABLE_GROUPS.map((group) => {
@@ -184,31 +183,27 @@ export default function BackupsPage() {
             {saveSettings.error && <p role="alert" className="text-sm text-red-700">{saveSettings.error instanceof Error ? saveSettings.error.message : t("backups.saveSettingsFailed")}</p>}
             <Button onClick={() => saveSettings.mutate(settings)} disabled={saveSettings.isPending}><Save className="h-4 w-4" />{saveSettings.isPending ? t("common.saving") : t("backups.saveSettings")}</Button>
           </div>}
-        </DialogContent>
       </Dialog>
 
       {error && (
-        <p className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <Alert variant="destructive" className="rounded-lg border-red-200">
           {error instanceof Error ? error.message : t("backups.operationFailed")}
-        </p>
+        </Alert>
       )}
 
       {configuration && !configuration.configured && (
-        <Card className="rounded-3xl border border-amber-200 bg-amber-50 p-6">
-          <CardHeader className="py-0">
+        <Card variant="bordered" className="rounded-3xl border-amber-200 bg-amber-50 p-6" contentClassName="space-y-5">
             <div className="flex items-start gap-3">
               <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-700" />
               <div>
-                <CardTitle className="text-amber-950">
+                <h3 className="text-lg font-semibold leading-none text-amber-950">
                   {t("backups.setupTitle")}
-                </CardTitle>
-                <CardDescription className="mt-1 text-amber-800">
+                </h3>
+                <p className="mt-1 text-sm text-amber-800">
                   {t("backups.setupDescription")}
-                </CardDescription>
+                </p>
               </div>
             </div>
-          </CardHeader>
-          <CardContent className="pt-5">
             <div className="flex flex-wrap items-center gap-2">
               {configuration.missing.map((item) => (
                 <Badge
@@ -233,18 +228,14 @@ export default function BackupsPage() {
                 {t("backups.checkAgain")}
               </Button>
             </div>
-          </CardContent>
         </Card>
       )}
 
-      <Card className="rounded-3xl border-0 bg-white p-6">
-        <CardHeader className="py-0">
-          <CardTitle>{t("backups.automatic")}</CardTitle>
-          <CardDescription>
-            {t("backups.scheduleNote")}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-5 pt-5">
+      <Card
+        title={t("backups.automatic")}
+        description={t("backups.scheduleNote")}
+        contentClassName="space-y-5"
+      >
           {settings && (
             <>
               <div className="flex items-center justify-between gap-4 border-t border-neutral-100 pt-5">
@@ -266,9 +257,13 @@ export default function BackupsPage() {
                         value={settings.scheduleType}
                         containerClassName="w-1/2 max-w-52 shrink-0 text-sm"
                         disabled={autoSaveSettings.isPending}
-                        onChange={(event) => {
-                          const scheduleType = event.target
-                            .value as BackupSettings["scheduleType"];
+                        options={[
+                          { value: "daily", label: t("backups.daily") },
+                          { value: "weekly", label: t("backups.weekly") },
+                          { value: "monthly", label: t("backups.monthly") },
+                        ]}
+                        onValueChange={(value) => {
+                          const scheduleType = value as BackupSettings["scheduleType"];
                           autoSaveSettings.mutate({
                             ...settings,
                             scheduleType,
@@ -280,12 +275,7 @@ export default function BackupsPage() {
                                   : null,
                           });
                         }}
-                        className="px-3 py-2"
-                      >
-                        <option value="daily">{t("backups.daily")}</option>
-                        <option value="weekly">{t("backups.weekly")}</option>
-                        <option value="monthly">{t("backups.monthly")}</option>
-                      </Select>
+                      />
                     </div>
 
                     {settings.scheduleType === "weekly" && (
@@ -293,24 +283,18 @@ export default function BackupsPage() {
                         <Label htmlFor="weekday">{t("backups.dayOfWeek")}</Label>
                         <Select
                           id="weekday"
-                          value={settings.scheduleValue ?? 1}
+                          value={String(settings.scheduleValue ?? 1)}
                           containerClassName="w-1/2 max-w-52 shrink-0"
                           disabled={autoSaveSettings.isPending}
-                          onChange={(event) =>
+                          options={WEEKDAYS.map((day) => ({ value: String(day.value), label: t(day.labelKey) }))}
+                          onValueChange={(value) =>
                             autoSaveSettings.mutate({
                               ...settings,
-                              scheduleValue: Number(event.target.value),
+                              scheduleValue: Number(value),
                             })
                           }
-                          
-                        className="px-3 py-2 text-sm"
-                        >
-                          {WEEKDAYS.map((day) => (
-                            <option key={day.value} value={day.value}>
-                              {t(day.labelKey)}
-                            </option>
-                          ))}
-                        </Select>
+                          className="text-sm"
+                        />
                       </div>
                     )}
 
@@ -388,7 +372,6 @@ export default function BackupsPage() {
               )}
             </>
           )}
-        </CardContent>
       </Card>
 
       <section className="overflow-hidden rounded-3xl bg-white">

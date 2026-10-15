@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import clsx from "clsx";
 import { Search } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { HeaderSearchProps } from "./header-search-types";
 
@@ -19,14 +20,15 @@ export function HeaderSearch({ value, onChange, label, placeholder, onSubmit, tr
 
 	return (
 		<div className={clsx("flex min-w-0 flex-1 items-center", mobileEnd && !expanded && "max-md:justify-end")}>
-			<button
+			<Button
+				variant="unstyled"
 				type="button"
 				onClick={() => setExpanded(true)}
 				aria-label={label}
 				className={clsx("flex h-10 w-10 shrink-0 items-center justify-center rounded-full hover:bg-neutral-200 md:hidden", value ? "bg-blue-100 text-blue-700" : "text-neutral-600", expanded && "hidden")}
 			>
 				<Search className="h-5 w-5" />
-			</button>
+			</Button>
 			<form
 				role="search"
 				onSubmit={(event) => { event.preventDefault(); onSubmit?.(); }}

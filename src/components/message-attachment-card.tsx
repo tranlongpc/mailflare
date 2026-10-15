@@ -3,6 +3,7 @@
 import { ArrowDownToLine, Play } from "lucide-react";
 import { formatAttachmentSize } from "@/app/(dashboard)/inbox/[messageId]/utils";
 import { useLanguage } from "@/components/language-provider";
+import { Button } from "@/components/ui/button";
 import type { MessageAttachmentCardProps } from "./message-attachment-card-types";
 import { getAttachmentFileUrl } from "./message-attachment-viewer-utils";
 import { getAttachmentVisual } from "./message-attachment-card-utils";
@@ -18,8 +19,9 @@ export function MessageAttachmentCard({
 	const previewUrl = getAttachmentFileUrl(messageId, attachment.id, "preview");
 
 	return (
-		<button
+		<Button
 			type="button"
+			variant="unstyled"
 			onClick={() => onPreview(attachment)}
 			className="group flex w-full items-center gap-3 rounded-lg border border-neutral-200 p-2.5 text-left transition-colors hover:border-blue-200 hover:bg-blue-50/40"
 		>
@@ -59,6 +61,6 @@ export function MessageAttachmentCard({
 				</span>
 			</span>
 			<ArrowDownToLine className="h-4 w-4 shrink-0 text-neutral-400 transition-colors group-hover:text-blue-600" />
-		</button>
+		</Button>
 	);
 }

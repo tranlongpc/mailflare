@@ -14,6 +14,8 @@ import {
 	Underline,
 } from "lucide-react";
 import { useLanguage } from "@/components/language-provider";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Tooltip } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { EmailHtmlRenderer } from "@/components/messages/email-html-renderer";
@@ -139,7 +141,8 @@ export function RichTextEditor({
 		<>
 		{COMMANDS.map((item) => (
 			<Tooltip key={item.command} label={t(item.labelKey)}>
-				<button
+				<Button
+					variant="unstyled"
 					type="button"
 					aria-label={t(item.labelKey)}
 					aria-pressed={!!active[item.command]}
@@ -152,11 +155,12 @@ export function RichTextEditor({
 					)}
 				>
 					<item.icon className="h-4 w-4" />
-				</button>
+				</Button>
 			</Tooltip>
 		))}
 		<Tooltip label={t("editor.insertLinkHint")}>
-			<button
+			<Button
+				variant="unstyled"
 				type="button"
 				aria-label={t("editor.insertLink")}
 				disabled={disabled}
@@ -165,10 +169,11 @@ export function RichTextEditor({
 				className="rounded-md p-1.5 text-neutral-500 hover:bg-neutral-100 hover:text-neutral-900"
 			>
 				<Link2 className="h-4 w-4" />
-			</button>
+			</Button>
 		</Tooltip>
 		<Tooltip label={t("editor.clearFormatting")}>
-			<button
+			<Button
+				variant="unstyled"
 				type="button"
 				aria-label={t("editor.clearFormatting")}
 				disabled={disabled}
@@ -177,7 +182,7 @@ export function RichTextEditor({
 				className="rounded-md p-1.5 text-neutral-500 hover:bg-neutral-100 hover:text-neutral-900"
 			>
 				<RemoveFormatting className="h-4 w-4" />
-			</button>
+			</Button>
 		</Tooltip>
 		</>
 	);
@@ -207,7 +212,8 @@ export function RichTextEditor({
 				/>
 				{quotedHtml && (
 					<div className="px-4 pb-3">
-						<button
+						<Button
+							variant="unstyled"
 							type="button"
 							onClick={() => setShowQuoted((open) => !open)}
 							aria-expanded={showQuoted}
@@ -216,7 +222,7 @@ export function RichTextEditor({
 							title={showQuoted ? t("editor.hideQuoted") : t("editor.showQuoted")}
 						>
 							•••
-						</button>
+						</Button>
 						{showQuoted && (
 							<EmailHtmlRenderer className="mt-2" html={quotedHtml} preserveLeadingQuote />
 						)}
@@ -232,7 +238,8 @@ export function RichTextEditor({
 					<div
 						className="absolute bottom-full left-2 z-10 mb-1 flex items-center gap-2 rounded-lg border border-neutral-200 bg-white p-2 shadow-lg"
 					>
-						<input
+						<Input
+							variant="bare"
 							autoFocus
 							value={linkUrl}
 							onChange={(event) => setLinkUrl(event.target.value)}
@@ -247,9 +254,9 @@ export function RichTextEditor({
 							aria-label={t("editor.insertLink")}
 							className="h-8 w-64 rounded-md border border-neutral-200 px-2 text-sm outline-none focus:border-blue-400"
 						/>
-						<button type="button" onClick={applyLink} className="rounded-md bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700">
+						<Button variant="unstyled" type="button" onClick={applyLink} className="rounded-md bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700">
 							{t("editor.apply")}
-						</button>
+						</Button>
 					</div>
 				)}
 			</div>

@@ -11,6 +11,7 @@ import { useRemoteContent } from "./use-remote-content";
 import { getMessageBodyDisplay, resolveInlineAttachmentUrls } from "@/app/(dashboard)/inbox/[messageId]/utils";
 
 import { useLanguage } from "@/components/language-provider";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { ConversationMessageCardProps, ConversationThreadProps } from "./conversation-thread-types";
 import { ThreadMessageActions } from "./thread-message-actions";
@@ -70,15 +71,16 @@ export function ConversationThread({
 					<li className="flex items-center justify-center gap-1 py-2 text-center border-y border-neutral-100 h-px my-4">
 						<span className="bg-white px-6 flex flex-row items-center gap-2">
 							<span className="text-sm font-medium text-neutral-600">{collapsedLabel}</span>
-							<button
+							<Button
 								type="button"
+								variant="unstyled"
 								onClick={() => onExpandedAllChange(true)}
 								aria-label={t("thread.expand", { label: collapsedLabel })}
 								title={t("thread.expand", { label: collapsedLabel })}
 								className="inline-flex h-6 w-6 items-center justify-center rounded-full text-neutral-500 hover:bg-neutral-100 hover:text-neutral-900"
 							>
 								<ChevronsUpDown className="h-4 w-4" />
-							</button>
+							</Button>
 						</span>
 					</li>
 				) : (
@@ -154,8 +156,9 @@ export function ConversationMessageCard({
 		<article className={cn("bg-white transition-colors px-3 sm:px-6", !expanded && "hover:bg-neutral-50", !isAnyPanelVisible && "sm:pl-12")}>
 			<div className="w-full">
 				<div className="flex w-full flex-wrap items-start gap-x-3 py-3 sm:pl-4">
-					<button
+					<Button
 						type="button"
+						variant="unstyled"
 						onClick={() => {
 							const shouldExpand = !locallyExpanded;
 							setLocallyExpanded(shouldExpand);
@@ -186,7 +189,7 @@ export function ConversationMessageCard({
 								<span className={clsx(!locallyRead ? "font-semibold" : "text-neutral-500", "block truncate text-[13px]")}>{message.snippet || t("thread.noPreview")}</span>
 							)}
 						</span>
-					</button>
+					</Button>
 					<span className={clsx(!locallyRead ? "font-semibold" : "", "shrink-0 items-center gap-2 text-xs mr-2 mt-2", "hidden sm:flex")}>
 						{attachments.length > 0 && <Paperclip className="h-3.5 w-3.5" aria-label={t("thread.attachmentCount", { count: attachments.length })} />}
 						{formatUserDate(message.createdAt, { month: "short", day: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}
@@ -201,9 +204,9 @@ export function ConversationMessageCard({
 					<div className={clsx("sm:hidden flex w-full items-center gap-2 pl-12 text-xs", locallyRead ? "text-neutral-500" : "font-semibold text-neutral-700")}>
 						{attachments.length > 0 && <Paperclip className="h-3.5 w-3.5" aria-label={t("thread.attachmentCount", { count: attachments.length })} />}
 						<span>{formatUserDate(message.createdAt, { month: "short", day: "2-digit", year: "numeric" })}</span>
-							<button type="button" className="text-blue-600 hover:underline" aria-expanded={detailsOpen} onClick={() => setDetailsOpen((open) => !open)}>
+							<Button type="button" variant="unstyled" className="text-blue-600 hover:underline" aria-expanded={detailsOpen} onClick={() => setDetailsOpen((open) => !open)}>
 							{t("message.details")}
-						</button>
+						</Button>
 					</div>
 					{detailsOpen && (
 						<dl className="sm:hidden w-full space-y-0.5 break-words pt-2 text-xs text-neutral-500">

@@ -37,6 +37,14 @@ interface CloudflareEnv {
 	S3_REGION?: string;
 	S3_ACCESS_KEY_ID?: string;
 	S3_SECRET_ACCESS_KEY?: string;
+	/**
+	 * An R2 API token (Object Read & Write on the bucket) for the R2 binding's bucket. Optional: with it, Drive files
+	 * upload from the browser straight to R2 on signed URLs instead of streaming through the Worker.
+	 */
+	R2_ACCOUNT_ID?: string;
+	R2_ACCESS_KEY_ID?: string;
+	R2_SECRET_ACCESS_KEY?: string;
+	R2_BUCKET?: string;
 	CF_TOKEN?: string;
 	CF_API_KEY?: string;
 	CF_EMAIL?: string;

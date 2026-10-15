@@ -25,6 +25,15 @@ import { runDriveTrashRetention } from "./src/lib/drive/retention";
 import { runAccountRetention } from "./src/lib/accounts/deletion";
 export { RealtimeHub } from "./src/lib/realtime/hub";
 
+// workerd forbids eval(), so React's dev-only Flight client logs this once per load. It only costs richer server stack traces in dev; production never checks.
+if (process.env.NODE_ENV !== "production") {
+	const consoleError = console.error.bind(console);
+	console.error = (...args: unknown[]) => {
+		if (typeof args[0] === "string" && args[0].startsWith("eval() is not supported in this environment.")) return;
+		consoleError(...args);
+	};
+}
+
 export default {
 	async fetch(request: Request, rawEnv: CloudflareEnv, ctx: ExecutionContext) {
 		const env = withStorage(rawEnv);

@@ -145,7 +145,31 @@ const lintConfig = {
     "typescript/no-wrapper-object-types": "error",
     "typescript/prefer-as-const": "error",
     "typescript/prefer-namespace-keyword": "error",
-    "typescript/triple-slash-reference": "error"
+    "typescript/triple-slash-reference": "error",
+    // Feature code composes the primitives in src/components/ui; only those files render raw controls.
+    "react/forbid-elements": [
+      "error",
+      {
+        "forbid": [
+          { "element": "button", "message": "use <Button> (variant=\"unstyled\" for custom rows) from @/components/ui/button" },
+          { "element": "input", "message": "use <Input>, <Checkbox> or <RadioGroup> from @/components/ui" },
+          { "element": "select", "message": "use <Select options={...}> from @/components/ui/select" },
+          { "element": "textarea", "message": "use <Textarea> from @/components/ui/textarea" },
+          { "element": "label", "message": "use <Label>, <FormField> or <Checkbox label> from @/components/ui" }
+        ]
+      }
+    ],
+    "no-restricted-imports": [
+      "error",
+      {
+        "patterns": [
+          { "group": ["@radix-ui/*"], "message": "UI primitives are custom; use @/components/ui" }
+        ],
+        "paths": [
+          { "name": "class-variance-authority", "message": "Variants are Record maps combined with cn()" }
+        ]
+      }
+    ]
   },
   "ignorePatterns": [
     ".next/**",
@@ -168,6 +192,14 @@ const lintConfig = {
       "rules": {
         "no-unused-vars": "off",
         "typescript-eslint-js/no-unused-vars": "warn"
+      }
+    },
+    {
+      "files": [
+        "src/components/ui/**"
+      ],
+      "rules": {
+        "react/forbid-elements": "off"
       }
     }
   ]

@@ -1,17 +1,18 @@
 "use client";
 
-import { createElement, useState, useMemo, useCallback, useRef } from "react";
+import { createElement, useState, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Archive, Ban, BellOff, Clock, FileCode2, Forward, Mail, MailOpen, MoreVertical, Reply, ReplyAll, ShieldAlert, Trash2 } from "lucide-react";
 import { useLanguage } from "@/components/language-provider";
 import { useCompose } from "@/components/compose/compose-context";
 import { MessageSourceDialog } from "@/components/messages/message-source-dialog";
-import { useDismissible } from "@/components/use-dismissible";
 import { useMessageListVisibility } from "@/components/messages/message-list-visibility";
 import { MessageSnoozeDialog } from "./message-snooze-dialog";
 import { useIsMobile } from "@/components/sidebar-mobile-utils";
 import { useHotkeys, useShortcuts } from "@/components/shortcuts";
 import { Button } from "@/components/ui/button";
+import { DropdownMenu } from "@/components/ui/dropdown-menu";
+import type { DropdownItem } from "@/components/ui/dropdown-menu-types";
 import { Tooltip } from "@/components/ui/tooltip";
 import type { BulkMessageAction } from "@/app/api/messages/bulk/types";
 import type { MessageActionsProps, ReplyMode } from "./types";
@@ -59,8 +60,6 @@ export function MessageActions({
 	>(null);
 	const [error, setError] = useState<string | null>(null);
 	const [moreOpen, setMoreOpen] = useState(false);
-	const moreRef = useRef<HTMLDivElement>(null);
-	useDismissible(moreOpen, () => setMoreOpen(false), moreRef);
 	const [sourceOpen, setSourceOpen] = useState(false);
 	const [snoozeOpen, setSnoozeOpen] = useState(false);
 
@@ -255,6 +254,29 @@ export function MessageActions({
 	const disabled = pendingAction !== null;
 	const markAction: BulkMessageAction = read ? "unread" : "read";
 	const moveActions = getMoveMessageActions(status, direction);
+	const moreItems: DropdownItem[] = [
+		...(isMobile
+			? [
+				{ key: "archive", label: t("common.archive"), icon: <Archive className="h-4 w-4" />, disabled: status === "archived", onSelect: () => void runAction("archive") },
+				{ key: "reply", label: t("message.reply"), icon: <Reply className="h-4 w-4" />, onSelect: () => { setMoreOpen(false); void handleReply("reply"); } },
+				...(canReplyAll ? [{ key: "replyAll", label: t("message.replyAll"), icon: <ReplyAll className="h-4 w-4" />, onSelect: () => { setMoreOpen(false); void handleReply("replyAll"); } }] : []),
+				...(message && messageMeta ? [{ key: "forward", label: t("message.forward"), icon: <Forward className="h-4 w-4" />, onSelect: () => { setMoreOpen(false); void handleForward(); } }] : []),
+				{ key: "mark", label: read ? t("common.markUnread") : t("common.markRead"), icon: read ? <Mail className="h-4 w-4" /> : <MailOpen className="h-4 w-4" />, onSelect: () => void runAction(markAction) },
+			]
+			: []),
+		...(direction === "inbound" && status === "received"
+			? [{ key: "snooze", label: t("common.snooze"), icon: <Clock className="h-4 w-4" />, separatorBefore: isMobile, onSelect: () => { setMoreOpen(false); setSnoozeOpen(true); } }]
+			: []),
+		...(direction === "inbound"
+			? [
+				{ key: "unsubscribe", label: t("actions.unsubscribe"), icon: <BellOff className="h-4 w-4 shrink-0" />, separatorBefore: isMobile && status !== "received", disabled: !unsubscribeUrl && status === "trash", onSelect: () => void onUnsubscribe() },
+				{ key: "block", label: t("message.blockContact"), icon: <Ban className="h-4 w-4" />, onSelect: () => void onBlockContact() },
+			]
+			: []),
+		{ key: "source", label: t("message.showOriginal"), icon: <FileCode2 className="h-4 w-4" />, separatorBefore: isMobile || direction === "inbound", onSelect: () => { setMoreOpen(false); setSourceOpen(true); } },
+		{ kind: "label", key: "moveTo", label: t("common.moveTo"), separatorBefore: true },
+		...moveActions.map((item) => ({ key: item.action, label: t(item.labelKey), icon: createElement(item.icon, { size: 16 }), onSelect: () => void runAction(item.action) })),
+	];
 
 	return (
 		<div className="flex flex-wrap items-center gap-3 text-neutral-600 flex-1 min-w-0">
@@ -375,112 +397,26 @@ export function MessageActions({
 			</Tooltip>
 				</>
 			)}
-			<div ref={moreRef} className="relative">
-				<Tooltip label={t("common.moreActions")}>
-					<Button
-						type="button"
-						variant="ghost"
-						size="roundedSM"
-						aria-label={t("common.moreActions")}
-						aria-expanded={moreOpen}
-						disabled={disabled}
-						onClick={() => setMoreOpen((open) => !open)}
-					>
-						<MoreVertical size={iconSize} />
-					</Button>
-				</Tooltip>
-
-
-				{moreOpen && (
-					<div className="absolute right-0 top-8 z-20 w-54 rounded-xl border border-neutral-200 bg-white p-2 shadow-lg">
-						{isMobile && (
-							<>
-								<button type="button" className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-neutral-700 hover:bg-neutral-100 disabled:text-neutral-400" disabled={status === "archived"} onClick={() => void runAction("archive")}>
-									<Archive className="h-4 w-4" />
-									{t("common.archive")}
-								</button>
-								<button type="button" className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-neutral-700 hover:bg-neutral-100 disabled:text-neutral-400" onClick={() => { setMoreOpen(false); void handleReply("reply"); }}>
-									<Reply className="h-4 w-4" />
-									{t("message.reply")}
-								</button>
-								{canReplyAll && (
-									<button type="button" className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-neutral-700 hover:bg-neutral-100 disabled:text-neutral-400" onClick={() => { setMoreOpen(false); void handleReply("replyAll"); }}>
-										<ReplyAll className="h-4 w-4" />
-										{t("message.replyAll")}
-									</button>
-								)}
-								{message && messageMeta && (
-									<button type="button" className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-neutral-700 hover:bg-neutral-100 disabled:text-neutral-400" onClick={() => { setMoreOpen(false); void handleForward(); }}>
-										<Forward className="h-4 w-4" />
-										{t("message.forward")}
-									</button>
-								)}
-								<button type="button" className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-neutral-700 hover:bg-neutral-100 disabled:text-neutral-400" onClick={() => void runAction(markAction)}>
-									{read ? <Mail className="h-4 w-4" /> : <MailOpen className="h-4 w-4" />}
-									{read ? t("common.markUnread") : t("common.markRead")}
-								</button>
-								<hr className="my-1 border-neutral-100" />
-							</>
-						)}
-						{direction === "inbound" && status === "received" && (
-							<button
-								type="button"
-								className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-neutral-700 hover:bg-neutral-100"
-								onClick={() => { setMoreOpen(false); setSnoozeOpen(true); }}
-							>
-								<Clock className="h-4 w-4" />
-								{t("common.snooze")}
-							</button>
-						)}
-						{direction === "inbound" && (
-							<>
-								<button
-									type="button"
-									className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-neutral-700 hover:bg-neutral-100 disabled:cursor-not-allowed disabled:text-neutral-400"
-									disabled={!unsubscribeUrl && status === "trash"}
-									onClick={() => void onUnsubscribe()}
-								>
-									<BellOff className="h-4 w-4 shrink-0" />
-									{t("actions.unsubscribe")}
-								</button>
-								<button
-									type="button"
-									className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-neutral-700 hover:bg-neutral-100"
-									onClick={() => void onBlockContact()}
-								>
-									<Ban className="h-4 w-4" />
-									{t("message.blockContact")}
-								</button>
-								<hr className="my-1 border-neutral-100" />
-							</>
-						)}
-						<button
+			<Tooltip label={t("common.moreActions")}>
+				<DropdownMenu
+					open={moreOpen}
+					onOpenChange={setMoreOpen}
+					align="end"
+					className="w-54"
+					items={moreItems}
+					trigger={
+						<Button
 							type="button"
-							className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-neutral-700 hover:bg-neutral-100"
-							onClick={() => { setMoreOpen(false); setSourceOpen(true); }}
+							variant="ghost"
+							size="roundedSM"
+							aria-label={t("common.moreActions")}
+							disabled={disabled}
 						>
-							<FileCode2 className="h-4 w-4" />
-							{t("message.showOriginal")}
-						</button>
-						<hr className="my-1 border-neutral-100" />
-						<p className="mt-1 px-3 pb-1 pt-2 text-sm font-medium text-neutral-500">
-							{t("common.moveTo")}
-						</p>
-						{moveActions.map((item) => (
-							<button
-								key={item.action}
-								type="button"
-								className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-neutral-700 hover:bg-neutral-100"
-								onClick={() => void runAction(item.action)}
-							>
-								{createElement(item.icon, { size: 16 })}
-								{t(item.labelKey)}
-							</button>
-						))}
-					</div>
-				)}
-
-			</div>
+							<MoreVertical size={iconSize} />
+						</Button>
+					}
+				/>
+			</Tooltip>
 
 			<MessageSourceDialog messageId={messageId} open={sourceOpen} onOpenChange={setSourceOpen} />
 			<MessageSnoozeDialog messageId={messageId} open={snoozeOpen} onOpenChange={setSnoozeOpen} />

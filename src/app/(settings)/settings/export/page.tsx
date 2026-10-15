@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { Download } from "lucide-react";
 import { useLanguage } from "@/components/language-provider";
 import { useSelectedMailbox } from "@/components/mailbox-provider";
+import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import type { ExportState } from "./types";
 import { exportMailbox } from "./utils";
@@ -47,9 +47,9 @@ export default function SettingsExportPage() {
 						{exportState.loading ? t("export.preparing") : t("export.download")}
 					</Button>
 					{exportState.error && (
-						<p className="rounded-lg border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700">
+						<Alert variant="destructive" className="rounded-lg">
 							{exportState.error}
-						</p>
+						</Alert>
 					)}
 				</div>
 			</section>

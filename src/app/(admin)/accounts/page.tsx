@@ -5,12 +5,12 @@ import { useEffect, useState } from "react";
 import { Plus } from "lucide-react";
 import { useLanguage } from "@/components/language-provider";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog } from "@/components/ui/dialog";
+import { FormField } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
+import { PageHeader } from "@/components/shared/page-header";
 import { authFetch } from "@/lib/auth/client";
-import { LicenseRequiredOverlay } from "@/components/license-required-overlay";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { defaultTranslator } from "@/lib/i18n/utils";
 import { AccountAliases } from "./account-aliases";
@@ -43,7 +43,6 @@ export default function AccountsPage() {
 	const [createOpen, setCreateOpen] = useState(false);
 	const [message, setMessage] = useState<string | null>(null);
 	const [seats, setSeats] = useState<AccountResponse["seats"] | null>(null);
-	const [teamRequired, setTeamRequired] = useState(false);
 	const [selected, setSelected] = useState<Set<string>>(new Set());
 	const [deleteOpen, setDeleteOpen] = useState(false);
 	const [restoringId, setRestoringId] = useState<string | null>(null);
@@ -65,7 +64,6 @@ export default function AccountsPage() {
 			setDomainId(data.domains?.[0]?.id ?? "");
 		}).catch((error) => {
 			const text = error instanceof Error ? error.message : t("accounts.loadFailed");
-			setTeamRequired(/(pro|team) license/i.test(text) && !/seats/i.test(text));
 			setMessage(text);
 		}).finally(() => setLoading(false));
 	}, []);
@@ -113,18 +111,18 @@ export default function AccountsPage() {
 	const seatsFull = !!seats && seats.limit !== null && seats.used >= seats.limit;
 
 	return <div className="space-y-6">
-		<div className="flex items-center justify-between gap-4"><div><h1 className="text-2xl md:text-3xl font-medium text-neutral-900">{t("accounts.title")}</h1><p className="mt-2 text-sm text-neutral-500">{t("accounts.description")}</p>{seats && seats.limit !== null && <p className={`mt-1 text-sm ${seatsFull ? "text-amber-700" : "text-neutral-500"}`}>{t("accounts.seatsUsed", { used: seats.used, limit: seats.limit })}{seatsFull ? ` ${t("accounts.seatsFull")}` : ""}</p>}</div>{!teamRequired && canManage && <Button disabled={seatsFull} className={mobilePrimaryActionClass} onClick={() => setCreateOpen(true)}><Plus className="h-4 w-4" />{t("accounts.new")}</Button>}</div>
+		<PageHeader title={t("accounts.title")} description={t("accounts.description")} actions={canManage && <Button disabled={seatsFull} className={mobilePrimaryActionClass} onClick={() => setCreateOpen(true)}><Plus className="h-4 w-4" />{t("accounts.new")}</Button>}>{seats && seats.limit !== null && <p className={`mt-1 text-sm ${seatsFull ? "text-amber-700" : "text-neutral-500"}`}>{t("accounts.seatsUsed", { used: seats.used, limit: seats.limit })}{seatsFull ? ` ${t("accounts.seatsFull")}` : ""}</p>}</PageHeader>
 		{message && !createOpen && <p role="alert" className="text-sm text-red-600">{message}</p>}
-		<div className="relative">{teamRequired && <LicenseRequiredOverlay required="Pro or Team"><div className="min-h-48 rounded-3xl bg-white" /></LicenseRequiredOverlay>}
+		<div className="relative">
 			<AccountsTable accounts={accounts} currentUserId={currentUser?.id} isPrimaryAdmin={!!currentUser?.isPrimaryAdmin} loading={loading} selected={selected} onSelectedChange={setSelected} onDeleteSelected={() => setDeleteOpen(true)} onRestore={restoreAccount} restoringId={restoringId} />
 		</div>
 		<DeleteAccountsDialog open={deleteOpen} onOpenChange={setDeleteOpen} accounts={accounts.filter((account) => selected.has(account.id))} candidates={accounts} onDeleted={async () => { setDeleteOpen(false); setSelected(new Set()); await loadAccounts(); }} />
-		<Dialog open={createOpen} onOpenChange={setCreateOpen}><DialogContent className="max-h-[calc(100dvh-4rem)] w-[min(640px,calc(100vw-32px))] overflow-y-auto"><DialogHeader><DialogTitle>{t("accounts.addTitle")}</DialogTitle><DialogDescription>{t("accounts.addDescription")}</DialogDescription></DialogHeader><form onSubmit={createAccount}><fieldset disabled={saving} className="space-y-4">
-			<div className="space-y-2"><Label htmlFor="account-username">{t("auth.email")}</Label><div className="flex h-10 overflow-hidden rounded-md border border-neutral-200 bg-white"><Input id="account-username" value={username} onChange={(event) => setUsername(event.target.value)} placeholder={t("accounts.username")} className="min-w-0 flex-1 rounded-none border-0 shadow-none" required /><span className="flex items-center text-sm text-neutral-500">@</span><Select aria-label={t("accounts.domain")} value={domainId} onChange={(event) => setDomainId(event.target.value)} containerClassName="min-w-0 max-w-[55%] shrink-0 rounded-none border-0 px-0" className="bg-transparent px-3 text-sm" required><option value="">{t("accounts.selectDomain")}</option>{domains.map((domain) => <option key={domain.id} value={domain.id}>{domain.hostname}</option>)}</Select></div></div>
-			<div className="space-y-2"><Label htmlFor="account-password">{t("auth.password")}</Label><Input id="account-password" type="password" minLength={8} value={password} onChange={(event) => setPassword(event.target.value)} required /></div>
-			{canChooseRole && <div className="space-y-2"><Label htmlFor="account-role">{t("accounts.role")}</Label><Select id="account-role" value={role} onChange={(event) => setRole(event.target.value as "admin" | "user")} containerClassName="h-10 w-full bg-white px-0" className="px-3 text-sm"><option value="user">{t("accounts.roleUser")}</option><option value="admin">{t("accounts.roleAdmin")}</option></Select></div>}
+		<Dialog open={createOpen} onOpenChange={setCreateOpen} className="w-[min(640px,calc(100vw-32px))]" title={t("accounts.addTitle")} description={t("accounts.addDescription")}><form onSubmit={createAccount}><fieldset disabled={saving} className="space-y-4">
+			<FormField label={t("auth.email")} htmlFor="account-username"><div className="flex h-10 overflow-hidden rounded-md border border-neutral-200 bg-white"><Input id="account-username" value={username} onChange={(event) => setUsername(event.target.value)} placeholder={t("accounts.username")} className="min-w-0 flex-1 rounded-none border-0 shadow-none" required /><span className="flex items-center text-sm text-neutral-500">@</span><Select aria-label={t("accounts.domain")} value={domainId} onValueChange={setDomainId} placeholder={t("accounts.selectDomain")} options={domains.map((domain) => ({ value: domain.id, label: domain.hostname }))} containerClassName="h-auto min-w-0 max-w-[55%] shrink-0 rounded-none border-0 bg-transparent" required /></div></FormField>
+			<FormField label={t("auth.password")} htmlFor="account-password"><Input id="account-password" type="password" minLength={8} value={password} onChange={(event) => setPassword(event.target.value)} required /></FormField>
+			{canChooseRole && <FormField label={t("accounts.role")} htmlFor="account-role"><Select id="account-role" value={role} onValueChange={(value) => setRole(value as "admin" | "user")} options={[{ value: "user", label: t("accounts.roleUser") }, { value: "admin", label: t("accounts.roleAdmin") }]} containerClassName="w-full" /></FormField>}
 			<AccountAliases domains={domains} domainId={domainId} username={username} useAllDomains={useAllDomains} onUseAllDomainsChange={setUseAllDomains} aliases={aliases} onAliasesChange={setAliases} />
 			{message && <p role="alert" className="text-sm text-red-600">{message}</p>}<Button type="submit" disabled={saving || !domainId}>{saving ? t("accounts.creating") : t("accounts.create")}</Button>
-		</fieldset></form></DialogContent></Dialog>
+		</fieldset></form></Dialog>
 	</div>;
 }

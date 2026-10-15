@@ -3,6 +3,7 @@ import { hasAdminAccount } from "@/lib/auth/setup";
 import { getEnv } from "@/lib/cloudflare";
 import { preflightDomain } from "@/lib/domains/preflight";
 import { hasConflictingMxRecords } from "@/lib/domains/mx-records";
+import { isManualZone } from "@/lib/domains/provision";
 import { setupDomainSchema } from "@/lib/validators";
 import { readJsonBody } from "@/lib/http/request";
 import { RequestBodyTooLargeError } from "@/lib/http/errors";
@@ -28,7 +29,8 @@ export async function POST(request: Request) {
 
 	try {
 		const domain = await preflightDomain(env, parsed.data.hostname);
-		const hasExistingMx = await hasConflictingMxRecords(
+		// A manual zone's MX is set by hand, so there is nothing here to replace.
+		const hasExistingMx = !isManualZone(domain.zone.id) && await hasConflictingMxRecords(
 			env,
 			domain.zone.id,
 			domain.hostname,

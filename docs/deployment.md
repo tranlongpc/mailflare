@@ -94,9 +94,21 @@ npm run db:migrate:remote
 
 Remote migrations require the target account's `database_id` in your local `wrangler.jsonc`. Do not commit an account-specific database ID to a reusable repository.
 
-## Object storage (R2, Backblaze B2 or AWS S3)
+## Object storage (R2, Backblaze B2, AWS S3 or any S3-compatible bucket)
 
-Raw mail, attachments, Drive files, avatars, branding icons, JMAP uploads and backups all live in one bucket. By default that is the `BUCKET` R2 binding in `wrangler.jsonc`. To use Backblaze B2 instead, set four Worker variables (as secrets, or in `.dev.vars` locally):
+Raw mail, attachments, Drive files, avatars, branding icons, JMAP uploads and backups all live in one bucket. By default that is the `BUCKET` R2 binding in `wrangler.jsonc` (local files under `/data/blobs` when self-hosted), because it works on deploy with no keys and R2 charges no egress.
+
+### Admin → Storage
+
+The primary administrator can point Mailflare at any S3-compatible bucket from **Admin → Storage**: Cloudflare R2 through its S3 API, Backblaze B2, Amazon S3, Wasabi, DigitalOcean Spaces, or a self-hosted server such as MinIO (turn on *path-style addressing* for it; the endpoint must be HTTPS). Enter the endpoint host, bucket, region (left blank, it is read from the endpoint where the endpoint names one) and an access key. The bucket is tested with a small write, read and delete before it is saved, and the saved storage takes precedence over the environment variables below. The secret is stored in D1 (`app_settings.storage_config`) like the other provider keys and is never sent back to the browser. **Use default storage** removes it.
+
+- **New objects go to the new bucket; nothing is copied.** Reads that miss there fall back to the default storage (the R2 binding or local files), so mail and files stored before the switch keep working, and deletes reach both. Objects on a custom bucket you used *earlier* are not read once you switch away from it: copy them to the new bucket first, keeping the same keys (for example with `rclone`).
+- **The choice is cached for 30 seconds** per Worker isolate, so other isolates pick up a change within that window.
+- **Bunny Storage** is supported through its own API rather than S3: pick the storage zone's region, enter the zone name and the zone password (under the zone's *FTP & API Access*, not the account API key). Bunny keeps no object metadata and has no multipart uploads, so Mailflare stores content types in small sidecar objects under `_mfmeta/`, and Drive uploads keep their parts under `_mfparts/` until the upload completes, when the app streams them into the final file. Bunny has no signed upload URLs, so Drive files upload through the app.
+
+### Environment variables
+
+To use Backblaze B2 without the admin page, set four Worker variables (as secrets, or in `.dev.vars` locally):
 
 | Variable | Example | Purpose |
 | --- | --- | --- |
@@ -112,14 +124,29 @@ npx wrangler secret put B2_BUCKET
 npx wrangler secret put B2_ENDPOINT
 ```
 
-To use AWS S3 instead, set `S3_BUCKET`, `S3_REGION` and credentials: `S3_ACCESS_KEY_ID` and `S3_SECRET_ACCESS_KEY`, which fall back to `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` so one IAM user can serve SES and storage. The bucket must be private and in the named region; the IAM user needs `s3:GetObject`, `s3:PutObject`, `s3:DeleteObject` and `s3:AbortMultipartUpload` on `arn:aws:s3:::<bucket>/*`. If both are configured, B2 wins.
+To use AWS S3 instead, set `S3_BUCKET`, `S3_REGION` and credentials: `S3_ACCESS_KEY_ID` and `S3_SECRET_ACCESS_KEY`, which fall back to `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` so one IAM user can serve SES and storage. The bucket must be private and in the named region; the IAM user needs `s3:GetObject`, `s3:PutObject`, `s3:DeleteObject`, `s3:AbortMultipartUpload` and `s3:ListMultipartUploadParts` on `arn:aws:s3:::<bucket>/*`. If both are configured, B2 wins.
 
-When all four B2 variables (or the S3 ones) are present that storage replaces R2 everywhere; with any missing, R2 stays in use (a partial setup is reported by `GET /api/v1/storage`). The R2 binding can stay in `wrangler.jsonc` and is simply unused. Use a bucket-restricted application key with read and write access, and keep the bucket private. Notes:
+When all four B2 variables (or the S3 ones) are present, and nothing is saved under Admin → Storage, that storage takes new objects; with any missing, R2 stays in use (a partial setup is reported by `GET /api/v1/storage` and on the admin page). Keep the R2 binding in `wrangler.jsonc`: reads fall back to it. Use a bucket-restricted application key with read and write access, and keep the bucket private. Notes:
 
-- **Switching does not copy data.** Objects already in R2 are not moved; copy them to the bucket first (for example with `rclone`, keeping the same keys) or old mail bodies, attachments and Drive files will report as missing.
-- **Drive upload parts** are buffered one at a time in the Worker (64 MB each). B2 and S3 require every part but the last to be at least 5 MB, which holds.
+- **Switching does not copy data.** Objects already in R2 are not moved, but they are still read from R2 when the new bucket does not have them. To retire R2, copy them over first (for example with `rclone`, keeping the same keys).
+- **Drive uploads go straight to the bucket** (see below). When they fall back to the app, parts are buffered one at a time in the Worker (64 MB each). B2 and S3 require every part but the last to be at least 5 MB, which holds.
 - **Lifecycle.** Set the bucket's lifecycle rule to keep only the last version and to delete unfinished large files after a few days, as R2 would abort incomplete multipart uploads.
 - **Test it** with `POST /api/v1/storage` (admin key with the `storage` scope), or the `manage_storage` MCP tool with `action: "test"`; it writes, reads and deletes a small object.
+
+### Direct Drive uploads
+
+Drive files upload from the browser straight to the bucket on short-lived signed URLs (one per 64 MB part), so file bytes never pass through the Worker or the self-hosted server. The app only starts the multipart upload, signs each part, and on completion reads the parts back from the bucket (`ListParts`) to check their sizes before assembling the file.
+
+- **Admin → Storage, B2 and S3** sign with their own keys; nothing else to set.
+- **R2** needs an R2 API token, because the `BUCKET` binding cannot sign URLs. Create one under **R2 → Manage API tokens** with *Object Read & Write* on the bucket, then set `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` and `R2_BUCKET` (the binding's `bucket_name`, `mailflare-raw` by default) as Worker secrets. Without them, uploads stream through the Worker as before.
+- **Self-hosted without B2 or S3** keeps files under `/data/blobs`, so uploads go through the server. Set B2 or S3 to move them off the box.
+- **CORS.** The browser can only `PUT` to the bucket if its CORS policy allows the app's origin, for example:
+
+  ```json
+  [{ "AllowedOrigins": ["https://mail.example.com"], "AllowedMethods": ["PUT"], "AllowedHeaders": ["*"], "MaxAgeSeconds": 3600 }]
+  ```
+
+  R2: bucket **Settings → CORS policy**. S3: bucket **Permissions → CORS**. B2: bucket **CORS Rules**, custom rules allowing the S3 `PUT` operation. If the bucket turns the browser away, the upload falls back to going through the app, so a missing rule only costs speed.
 
 ## Database backups
 

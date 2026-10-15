@@ -2,11 +2,13 @@
 
 import { useMemo, useRef, useState } from "react";
 import toast from "react-hot-toast";
-import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import clsx from "clsx";
 import { Folder, FolderInput, FolderPlus, HardDrive, RotateCcw, Trash2, X } from "lucide-react";
 import { useLanguage } from "@/components/language-provider";
 import { Button } from "@/components/ui/button";
+import { DropdownMenu } from "@/components/ui/dropdown-menu";
+import type { DropdownItem } from "@/components/ui/dropdown-menu-types";
+import { Input } from "@/components/ui/input";
 import { authFetch } from "@/lib/auth/client";
 import type { DriveItemDto } from "@/lib/drive/types";
 
@@ -128,34 +130,32 @@ export function DriveBulkActions({ selected, trashView, onDone }: { selected: Dr
 	}
 
 	const buttonClass = "h-9 gap-2 rounded-full px-3 text-sm";
+	const folderItemClass = "gap-2 px-2.5 text-neutral-700";
+	const folderItems: DropdownItem[] = [
+		{ key: "root", label: t("drive.myDrive"), icon: <HardDrive size={16} />, className: folderItemClass, onSelect: () => void move(null) },
+		...rows.map((folder): DropdownItem => ({ key: folder.id, label: folder.name, icon: <Folder size={16} className="text-amber-500" style={{ marginLeft: folder.depth * 14 }} />, disabled: folder.disabled, className: clsx(folderItemClass, "disabled:opacity-40"), onSelect: () => void move(folder.id) })),
+		...(folders && rows.length === 0 ? [{ kind: "label" as const, key: "empty", label: t("drive.noFolders") }] : []),
+	];
 	return (
 		<div className="flex flex-wrap items-center justify-end gap-1 text-sm">
 			{!trashView && canTrash && (
 				<>
 					<Button type="button" variant="ghost" className={buttonClass} disabled={busy} onClick={() => void run(() => act("trash"), (done) => t("drive.bulkTrashed", { count: done }))}><Trash2 size={16} />{t("drive.moveToTrash")}</Button>
-					{attachmentIds.length === 0 && ownsAll && <DropdownMenu.Root onOpenChange={(open) => void loadFolders(open)}>
-						<DropdownMenu.Trigger asChild>
-							<Button type="button" variant="ghost" className={buttonClass} disabled={busy}><FolderInput size={16} />{t("drive.moveToFolder")}</Button>
-						</DropdownMenu.Trigger>
-						<DropdownMenu.Portal>
-							<DropdownMenu.Content align="end" sideOffset={6} onCloseAutoFocus={(event) => event.preventDefault()} className="z-[200] w-72 rounded-xl border border-neutral-200 bg-white p-1.5 shadow-xl">
-								<form onSubmit={(event) => void createAndMove(event)} onKeyDown={(event) => event.stopPropagation()} className="flex items-center gap-1 border-b border-neutral-100 p-1.5 pb-2">
-									<FolderPlus size={16} className="shrink-0 text-neutral-500" />
-									<input ref={inputRef} value={name} onChange={(event) => setName(event.target.value)} maxLength={255} placeholder={t("drive.newFolderPlaceholder")} aria-label={t("drive.newFolderPlaceholder")} className="h-8 min-w-0 flex-1 rounded-md border border-neutral-200 bg-transparent px-2 text-sm placeholder:text-neutral-500 focus:border-blue-600 focus:outline-none" />
-									<Button type="submit" size="sm" disabled={busy || !name.trim()} title={t("drive.createAndMove")}>{t("drive.create")}</Button>
-								</form>
-								<div className="max-h-64 overflow-y-auto pt-1">
-									<DropdownMenu.Item onSelect={() => void move(null)} className="flex cursor-pointer items-center gap-2 rounded-lg px-2.5 py-2 text-sm text-neutral-700 outline-none data-[highlighted]:bg-neutral-100"><HardDrive size={16} className="shrink-0" />{t("drive.myDrive")}</DropdownMenu.Item>
-									{rows.map((folder) => (
-										<DropdownMenu.Item key={folder.id} disabled={folder.disabled} onSelect={() => void move(folder.id)} style={{ paddingLeft: 10 + folder.depth * 14 }} className={clsx("flex cursor-pointer items-center gap-2 rounded-lg py-2 pr-2.5 text-sm text-neutral-700 outline-none data-[disabled]:cursor-default data-[disabled]:opacity-40 data-[highlighted]:bg-neutral-100")}>
-											<Folder size={16} className="shrink-0 text-amber-500" /><span className="truncate">{folder.name}</span>
-										</DropdownMenu.Item>
-									))}
-									{folders && rows.length === 0 && <p className="px-2.5 py-2 text-xs text-neutral-500">{t("drive.noFolders")}</p>}
-								</div>
-							</DropdownMenu.Content>
-						</DropdownMenu.Portal>
-					</DropdownMenu.Root>}
+					{attachmentIds.length === 0 && ownsAll && <DropdownMenu
+						align="end"
+						offset={6}
+						onOpenChange={(open) => void loadFolders(open)}
+						className="w-72"
+						trigger={<Button type="button" variant="ghost" className={buttonClass} disabled={busy}><FolderInput size={16} />{t("drive.moveToFolder")}</Button>}
+						header={
+							<form onSubmit={(event) => void createAndMove(event)} onKeyDown={(event) => event.stopPropagation()} className="flex items-center gap-1 border-b border-neutral-100 p-1.5 pb-2">
+								<FolderPlus size={16} className="shrink-0 text-neutral-500" />
+								<Input variant="bare" ref={inputRef} value={name} onChange={(event) => setName(event.target.value)} maxLength={255} placeholder={t("drive.newFolderPlaceholder")} aria-label={t("drive.newFolderPlaceholder")} className="h-8 min-w-0 flex-1 rounded-md border border-neutral-200 bg-transparent px-2 text-sm placeholder:text-neutral-500 focus:border-blue-600 focus:outline-none" />
+								<Button type="submit" size="sm" disabled={busy || !name.trim()} title={t("drive.createAndMove")}>{t("drive.create")}</Button>
+							</form>
+						}
+						items={folderItems}
+					/>}
 				</>
 			)}
 			{ownsAll && trashView && (

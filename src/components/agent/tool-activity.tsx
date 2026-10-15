@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { ChevronLeft, Wrench } from "lucide-react";
 import { useLanguage } from "@/components/language-provider";
+import { Button } from "@/components/ui/button";
 import type { AgentDraftAction, AgentEmailReference, AgentMessage, AgentTurnProps } from "./types";
 import { agentActionProposal, agentToolLabel, draftFromToolContent, parseAgentToolContent } from "./utils";
 import { AgentEmailLink } from "./email-link";
@@ -44,8 +45,8 @@ export function AgentToolActivity({ item, forceOpen }: { item: AgentMessage; for
 export function AgentDraftActions({ action, onOpenDraft, onApproveDraft, approvingId }: { action: AgentDraftAction } & Pick<AgentTurnProps, "onOpenDraft" | "onApproveDraft" | "approvingId">) {
 	const { t } = useLanguage();
 	return <div className="flex flex-wrap items-center justify-end gap-3 text-xs">
-		<button type="button" onClick={() => onOpenDraft(action.draftId)} className="text-blue-700 hover:underline">{t("agent.activity.editDraft")}</button>
-		<button type="button" className="rounded-lg bg-blue-600 px-3 py-2 font-medium text-white disabled:opacity-50" disabled={approvingId === action.draftId} onClick={() => onApproveDraft(action.draftId, action.revision)}>{action.scheduledAt ? t("agent.activity.schedule") : t("agent.activity.approveSend")}</button>
+		<Button variant="unstyled" type="button" onClick={() => onOpenDraft(action.draftId)} className="text-blue-700 hover:underline">{t("agent.activity.editDraft")}</Button>
+		<Button variant="unstyled" type="button" className="rounded-lg bg-blue-600 px-3 py-2 font-medium text-white disabled:opacity-50" disabled={approvingId === action.draftId} onClick={() => onApproveDraft(action.draftId, action.revision)}>{action.scheduledAt ? t("agent.activity.schedule") : t("agent.activity.approveSend")}</Button>
 	</div>;
 }
 
@@ -56,7 +57,7 @@ export function AgentPendingActions({ item, onApproveAction, approvingId }: Pick
 	return <div className="space-y-2 text-xs">
 		{proposal.emails && <ul className="space-y-1">{proposal.emails.map((email) => <li key={email.id}><AgentEmailLink email={email} className="text-blue-700 hover:underline" /></li>)}</ul>}
 		<div className="flex flex-wrap items-center justify-end gap-3">
-			<button type="button" className="rounded-lg bg-blue-600 px-3 py-2 font-medium text-white disabled:opacity-50" disabled={!item.recordId || approvingId === item.id} onClick={() => onApproveAction(item)}>{approvingId === item.id ? t("agent.activity.approving") : proposal.action === "discard_draft" ? t("agent.activity.approveDiscard") : proposal.action === "mark_email_read" ? t("agent.activity.approveStatus") : t("agent.activity.approveMove", { destination: proposal.destination })}</button>
+			<Button variant="unstyled" type="button" className="rounded-lg bg-blue-600 px-3 py-2 font-medium text-white disabled:opacity-50" disabled={!item.recordId || approvingId === item.id} onClick={() => onApproveAction(item)}>{approvingId === item.id ? t("agent.activity.approving") : proposal.action === "discard_draft" ? t("agent.activity.approveDiscard") : proposal.action === "mark_email_read" ? t("agent.activity.approveStatus") : t("agent.activity.approveMove", { destination: proposal.destination })}</Button>
 		</div>
 	</div>;
 }

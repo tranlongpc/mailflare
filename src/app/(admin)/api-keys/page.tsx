@@ -7,18 +7,12 @@ import { Copy, KeyRound, Plus, Trash2 } from "lucide-react";
 import { useLanguage } from "@/components/language-provider";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import {
-	Dialog,
-	DialogContent,
-	DialogDescription,
-	DialogHeader,
-	DialogTitle,
-	DialogTrigger,
-} from "@/components/ui/dialog";
+import { Dialog } from "@/components/ui/dialog";
+import { FormField } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { List, ListRow } from "@/components/ui/list";
+import { PageHeader } from "@/components/shared/page-header";
 import { SectionRowSkeleton } from "@/components/page-skeletons";
 import { McpAgentInstructions } from "@/components/settings/mcp-agent-instructions";
 import { authFetch } from "@/lib/auth/client";
@@ -75,61 +69,59 @@ export default function ApiKeysPage() {
 
 	return (
 		<div className="space-y-6">
-			<div className="flex items-center justify-between gap-4">
-				<h1 className="text-2xl md:text-3xl font-medium">{t("admin.section.apiKeysTitle")}</h1>
-				<Dialog open={createOpen} onOpenChange={(open) => { if (create.isPending) return; setCreateOpen(open); if (!open) { setNewKey(null); setCopied(false); } }}>
-					<DialogTrigger asChild>
-						<Button className={mobilePrimaryActionClass}>
-							<Plus className="h-4 w-4" />
-							{t("apiKeys.new")}
-						</Button>
-					</DialogTrigger>
-					<DialogContent className="max-h-[calc(100vh-4rem)] overflow-y-auto">
-						<DialogHeader>
-							<DialogTitle>{newKey ? t("apiKeys.createdTitle") : t("apiKeys.createTitle")}</DialogTitle>
-							<DialogDescription>{newKey ? t("apiKeys.copyNow") : t("apiKeys.nameAndAccess")}</DialogDescription>
-						</DialogHeader>
-						{!newKey && <div className="space-y-4">
-						<div className="space-y-2">
-							<Label htmlFor="admin-key-name">{t("apiKeys.keyName")}</Label>
-							<Input id="admin-key-name" value={name} onChange={(e) => setName(e.target.value)} maxLength={100} placeholder={t("adminKeys.namePlaceholder")} />
-						</div>
-						<label className="flex items-start gap-3 text-sm"><Checkbox checked={mcpAllowed} onChange={(event) => setMcpAllowed(event.target.checked)} /><span><strong>{t("apiKeys.allowMcp")}</strong><span className="mt-1 block text-neutral-500">{t("adminKeys.allowMcpHint")}</span></span></label>
-						<fieldset className="space-y-2">
-							<legend className="text-sm font-medium">{t("apiKeys.permissions")}</legend>
-							<div className="space-y-2">
-								{ADMIN_KEY_PERMISSIONS.map((scope) => (
-									<label key={scope.value} className="flex items-start gap-3 text-sm">
-										<Checkbox
-											checked={scopes.includes(scope.value)}
-											className="mt-1"
-											onChange={(event) =>
-												setScopes((current) =>
-													event.target.checked
-														? [...current, scope.value]
-														: current.filter((item) => item !== scope.value),
-												)
-											}
-										/>
-										<span><strong>{t(scope.labelKey)}</strong><span className="block text-neutral-500">{t(scope.descriptionKey)}</span></span>
-									</label>
-								))}
-							</div>
-						</fieldset>
-						{create.isError && (
-							<p role="alert" className="text-sm text-red-600">{(create.error as Error).message}</p>
-						)}
-						<Button
-							onClick={() => create.mutate()}
-							disabled={!name.trim() || scopes.length === 0 || create.isPending}
-						>
-							{create.isPending ? t("accounts.creating") : t("adminKeys.createKey")}
-						</Button>
-						</div>}
-						{newKey && <div className="space-y-3 rounded-xl border border-blue-200 bg-blue-50 p-4"><code className="block break-all rounded bg-white p-2 text-xs">{newKey}</code>{createdMcpAllowed && <McpAgentInstructions mode="admin" apiKey={newKey} />}<div className="flex gap-2"><Button type="button" size="sm" variant="outline" onClick={() => void navigator.clipboard.writeText(newKey).then(() => setCopied(true))}><Copy className="h-4 w-4" />{copied ? t("common.copied") : t("apiKeys.copyKey")}</Button><Button type="button" size="sm" variant="ghost" onClick={() => { setCreateOpen(false); setNewKey(null); setCopied(false); }}>{t("common.done")}</Button></div></div>}
-					</DialogContent>
-				</Dialog>
-			</div>
+			<PageHeader
+				title={t("admin.section.apiKeysTitle")}
+				actions={
+					<Button className={mobilePrimaryActionClass} onClick={() => setCreateOpen(true)}>
+						<Plus className="h-4 w-4" />
+						{t("apiKeys.new")}
+					</Button>
+				}
+			/>
+			<Dialog
+				open={createOpen}
+				onOpenChange={(open) => { if (create.isPending) return; setCreateOpen(open); if (!open) { setNewKey(null); setCopied(false); } }}
+				title={newKey ? t("apiKeys.createdTitle") : t("apiKeys.createTitle")}
+				description={newKey ? t("apiKeys.copyNow") : t("apiKeys.nameAndAccess")}
+			>
+				{!newKey && <div className="space-y-4">
+				<FormField label={t("apiKeys.keyName")} htmlFor="admin-key-name">
+					<Input id="admin-key-name" value={name} onChange={(e) => setName(e.target.value)} maxLength={100} placeholder={t("adminKeys.namePlaceholder")} />
+				</FormField>
+				<Checkbox checked={mcpAllowed} onChange={(event) => setMcpAllowed(event.target.checked)} label={<strong>{t("apiKeys.allowMcp")}</strong>} description={t("adminKeys.allowMcpHint")} />
+				<fieldset className="space-y-2">
+					<legend className="text-sm font-medium">{t("apiKeys.permissions")}</legend>
+					<div className="space-y-2">
+						{ADMIN_KEY_PERMISSIONS.map((scope) => (
+							<Checkbox
+								key={scope.value}
+								checked={scopes.includes(scope.value)}
+								className="mt-1"
+								label={<strong>{t(scope.labelKey)}</strong>}
+								description={t(scope.descriptionKey)}
+								onChange={(event) =>
+									setScopes((current) =>
+										event.target.checked
+											? [...current, scope.value]
+											: current.filter((item) => item !== scope.value),
+									)
+								}
+							/>
+						))}
+					</div>
+				</fieldset>
+				{create.isError && (
+					<p role="alert" className="text-sm text-red-600">{(create.error as Error).message}</p>
+				)}
+				<Button
+					onClick={() => create.mutate()}
+					disabled={!name.trim() || scopes.length === 0 || create.isPending}
+				>
+					{create.isPending ? t("accounts.creating") : t("adminKeys.createKey")}
+				</Button>
+				</div>}
+				{newKey && <div className="space-y-3 rounded-xl border border-blue-200 bg-blue-50 p-4"><code className="block break-all rounded bg-white p-2 text-xs">{newKey}</code>{createdMcpAllowed && <McpAgentInstructions mode="admin" apiKey={newKey} />}<div className="flex gap-2"><Button type="button" size="sm" variant="outline" onClick={() => void navigator.clipboard.writeText(newKey).then(() => setCopied(true))}><Copy className="h-4 w-4" />{copied ? t("common.copied") : t("apiKeys.copyKey")}</Button><Button type="button" size="sm" variant="ghost" onClick={() => { setCreateOpen(false); setNewKey(null); setCopied(false); }}>{t("common.done")}</Button></div></div>}
+			</Dialog>
 			<section className="space-y-3">
 				{revoke.isError && <p role="alert" className="text-sm text-red-600">{revoke.error.message}</p>}
 				{isLoading && (

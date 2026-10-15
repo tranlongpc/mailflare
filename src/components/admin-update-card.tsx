@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import { CheckCircle2, CircleX, Database, RefreshCw } from "lucide-react";
 import { useLanguage } from "@/components/language-provider";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
 	applyDatabaseMigrations,
@@ -88,19 +89,13 @@ export function AdminUpdateCard() {
 	}
 
 	return (
-		<Card className="rounded-3xl border-0 bg-white p-6">
-			<CardHeader className="flex-row items-center gap-4 space-y-0 py-0">
-				<div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 text-blue-700">
-					<RefreshCw className="h-5 w-5" />
-				</div>
-				<div>
-					<CardTitle className="text-base">{t("update.title")}</CardTitle>
-					<p className="mt-1 text-sm text-neutral-500">
-						{t("update.description")}
-					</p>
-				</div>
-			</CardHeader>
-			<CardContent className="space-y-5 pt-5">
+		<Card
+			icon={<RefreshCw className="h-5 w-5" />}
+			title={<span className="text-base">{t("update.title")}</span>}
+			description={t("update.description")}
+			headerClassName="items-center gap-4"
+			contentClassName="space-y-5"
+		>
 				{isChecking && <Skeleton className="h-20 w-full rounded-2xl" />}
 
 				{!isChecking && status?.configured === false && (
@@ -142,14 +137,15 @@ export function AdminUpdateCard() {
 									: t("update.upToDate", { current: status.currentVersion })}
 							</p>
 							{status.available && (
-								<button
+								<Button
 									type="button"
+									variant="link"
 									onClick={handleUpdate}
 									disabled={isPending}
-									className="ml-auto shrink-0 text-sm font-medium text-blue-700 hover:underline disabled:pointer-events-none disabled:opacity-50"
+									className="ml-auto shrink-0"
 								>
 									{isPending ? t("update.starting") : t("update.updateButton")}
-								</button>
+								</Button>
 							)}
 						</div>
 					</div>
@@ -170,14 +166,15 @@ export function AdminUpdateCard() {
 								<p className="text-sm text-neutral-700">
 									{t("update.pendingMigrations", { count: migrationStatus.pending.length })}
 								</p>
-								<button
+								<Button
 									type="button"
+									variant="link"
 									onClick={handleMigrate}
 									disabled={isMigrating}
-									className="ml-auto shrink-0 text-sm font-medium text-blue-700 hover:underline disabled:pointer-events-none disabled:opacity-50"
+									className="ml-auto shrink-0"
 								>
 									{isMigrating ? t("update.updatingDatabase") : t("update.updateDatabase")}
-								</button>
+								</Button>
 							</div>
 						)}
 
@@ -210,7 +207,6 @@ export function AdminUpdateCard() {
 				)}
 				{error && <p role="alert" className="text-sm text-red-600">{error}</p>}
 				{migrationError && <p role="alert" className="text-sm text-red-600">{migrationError}</p>}
-			</CardContent>
 		</Card>
 	);
 }

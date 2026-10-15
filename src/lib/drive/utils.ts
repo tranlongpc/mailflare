@@ -1,7 +1,8 @@
 import type { DriveCrumb, DriveRole, DriveRow } from "./types";
 
 /**
- * Files upload in parts into a multipart upload (R2, or Backblaze B2 when configured), so no whole file is ever buffered in the Worker;
+ * Files upload in parts into a multipart upload. Normally the browser sends each part straight to the bucket on a signed URL
+ * (`src/lib/storage/direct.ts`); the limits below matter when parts come through the app instead. No whole file is ever buffered in the Worker;
  * with B2 one part at a time is held in memory to be signed, so keep this well under the 128 MB Worker limit. A part must stay
  * under the 100 MB request limit of Cloudflare's Free and Pro plans, and R2 allows 10,000 parts per object, which caps a
  * file at about 640 GB. Lowering the part size shrinks that cap; raising it needs a plan with larger request bodies.

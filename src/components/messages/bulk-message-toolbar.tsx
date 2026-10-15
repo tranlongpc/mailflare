@@ -1,19 +1,16 @@
 "use client";
 
 import { Archive, ArchiveRestore, ChevronDown, Folder, FolderInput, Inbox, Mail, MailOpen, MoreVertical, ShieldAlert, ShieldCheck, Trash2, Undo2, X } from "lucide-react";
-import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { useLanguage } from "@/components/language-provider";
 import { Button } from "@/components/ui/button";
+import { DropdownMenu } from "@/components/ui/dropdown-menu";
+import type { DropdownItem } from "@/components/ui/dropdown-menu-types";
 import { useSelectedMailbox } from "@/components/mailbox-provider";
 import { useMailboxFolders } from "./use-mailbox-folders";
 import { Tooltip } from "@/components/ui/tooltip";
 import { supportsPermanentDelete } from "@/lib/messages/permanent-delete-utils";
 import type { BulkMessageAction } from "@/app/api/messages/bulk/types";
 import type { BulkMessageToolbarProps } from "./types";
-
-const menuItemClass = "flex cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-sm text-neutral-700 outline-none data-[disabled]:opacity-50 data-[highlighted]:bg-neutral-100";
-const menuLabelClass = "mt-1 px-3 pb-1 pt-2 text-sm font-medium text-neutral-500";
-const menuContentClass = "z-[130] max-h-[min(24rem,var(--radix-dropdown-menu-content-available-height))] w-54 overflow-y-auto rounded-xl border border-neutral-200 bg-white p-2 shadow-lg";
 
 export function BulkMessageToolbar({
 	selectedCount,
@@ -45,6 +42,26 @@ export function BulkMessageToolbar({
 	].filter((option) => !option.hidden);
 	const { selectedMailbox } = useSelectedMailbox();
 	const folders = useMailboxFolders(selectedMailbox?.id);
+	const moveItems: DropdownItem[] = [
+		...moveOptions.map(({ value, label, Icon }) => ({ key: value, label, icon: <Icon className="h-4 w-4" />, onSelect: () => onAction(value as BulkMessageAction) })),
+		...(folders.length > 0
+			? [
+				{ kind: "label" as const, key: "folders", label: t("navigation.folders"), separatorBefore: true },
+				...folders.map((item) => ({
+					key: item.id,
+					label: item.name,
+					icon: <Folder className="h-4 w-4 shrink-0" style={{ color: item.color }} />,
+					onSelect: () => onAction("folder", item.id),
+				})),
+			]
+			: []),
+	];
+	const mobileItems: DropdownItem[] = [
+		{ key: "archive", label: archive.label, icon: <archive.Icon className="h-4 w-4" />, onSelect: () => onAction(archive.action as BulkMessageAction) },
+		{ key: "spam", label: spam.label, icon: <spam.Icon className="h-4 w-4" />, onSelect: () => onAction(spam.action as BulkMessageAction) },
+		...(canDeleteForever ? [{ key: "deleteForever", label: t("common.deleteForever"), icon: <Trash2 className="h-4 w-4" />, destructive: true, onSelect: () => onAction("delete") }] : []),
+		{ key: "clear", label: t("common.clearSelection"), icon: <X className="h-4 w-4" />, separatorBefore: true, onSelect: onClearSelection },
+	];
 	return (
 		<div className="flex min-w-0 items-center gap-2 text-neutral-600 w-full">
 			{!hideSelectedCount && (
@@ -87,59 +104,37 @@ export function BulkMessageToolbar({
 				</Button>
 			</Tooltip>
 			<span className="flex-1 max-md:hidden" />
-			<DropdownMenu.Root>
-				<Tooltip label={t("common.moveSelected")} className="max-md:hidden">
-					<DropdownMenu.Trigger asChild>
+			<Tooltip label={t("common.moveSelected")} className="max-md:hidden">
+				<DropdownMenu
+					align="end"
+					offset={4}
+					className="w-54"
+					items={moveItems}
+					trigger={
 						<Button variant="ghost" size="sm" className="max-md:hidden gap-1.5 bg-white text-xs font-medium text-neutral-700" disabled={pending}>
 							<FolderInput className="h-4 w-4" />
 							{t("common.moveTo")}
 							<ChevronDown className="h-3.5 w-3.5 text-neutral-500" />
 						</Button>
-					</DropdownMenu.Trigger>
-				</Tooltip>
-				<DropdownMenu.Portal>
-					<DropdownMenu.Content align="end" sideOffset={4} className={menuContentClass}>
-						{moveOptions.map(({ value, label, Icon }) => (
-							<DropdownMenu.Item key={value} className={menuItemClass} onSelect={() => onAction(value as BulkMessageAction)}><Icon className="h-4 w-4" />{label}</DropdownMenu.Item>
-						))}
-						{folders.length > 0 && (
-							<>
-								<DropdownMenu.Separator className="my-1 h-px bg-neutral-100" />
-								<DropdownMenu.Label className={menuLabelClass}>{t("navigation.folders")}</DropdownMenu.Label>
-								{folders.map((item) => (
-									<DropdownMenu.Item key={item.id} className={menuItemClass} onSelect={() => onAction("folder", item.id)}>
-										<Folder className="h-4 w-4 shrink-0" style={{ color: item.color }} />
-										<span className="truncate">{item.name}</span>
-									</DropdownMenu.Item>
-								))}
-							</>
-						)}
-					</DropdownMenu.Content>
-				</DropdownMenu.Portal>
-			</DropdownMenu.Root>
+					}
+				/>
+			</Tooltip>
 			<Tooltip label={t("common.clearSelection")} className="max-md:hidden">
 				<Button variant="ghost" size="sm" onClick={onClearSelection} disabled={pending} aria-label={t("common.clearSelection")}>
 					<X className="h-4 w-4" />
 				</Button>
 			</Tooltip>
-			<DropdownMenu.Root>
-				<DropdownMenu.Trigger asChild>
+			<DropdownMenu
+				align="end"
+				offset={4}
+				className="min-w-44 p-1 md:hidden"
+				items={mobileItems}
+				trigger={
 					<Button variant="ghost" size="sm" className="md:hidden" disabled={pending} aria-label={t("common.moreActions")}>
 						<MoreVertical className="h-4 w-4" />
 					</Button>
-				</DropdownMenu.Trigger>
-				<DropdownMenu.Portal>
-					<DropdownMenu.Content align="end" sideOffset={4} className="z-[130] min-w-44 rounded-xl border border-neutral-200 bg-white p-1 shadow-xl md:hidden">
-						<DropdownMenu.Item className={menuItemClass} onSelect={() => onAction(archive.action as BulkMessageAction)}><archive.Icon className="h-4 w-4" />{archive.label}</DropdownMenu.Item>
-						<DropdownMenu.Item className={menuItemClass} onSelect={() => onAction(spam.action as BulkMessageAction)}><spam.Icon className="h-4 w-4" />{spam.label}</DropdownMenu.Item>
-						{canDeleteForever && (
-							<DropdownMenu.Item className={`${menuItemClass} text-red-600`} onSelect={() => onAction("delete")}><Trash2 className="h-4 w-4" />{t("common.deleteForever")}</DropdownMenu.Item>
-						)}
-						<DropdownMenu.Separator className="my-1 h-px bg-neutral-100" />
-						<DropdownMenu.Item className={menuItemClass} onSelect={onClearSelection}><X className="h-4 w-4" />{t("common.clearSelection")}</DropdownMenu.Item>
-					</DropdownMenu.Content>
-				</DropdownMenu.Portal>
-			</DropdownMenu.Root>
+				}
+			/>
 		</div>
 	);
 }

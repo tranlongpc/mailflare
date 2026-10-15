@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useLanguage } from "@/components/language-provider";
+import { Label } from "@/components/ui/label";
+import { Select } from "@/components/ui/select";
 import { authFetch } from "@/lib/auth/client";
 import { TRASH_RETENTION_OPTIONS, describeTrashRetention } from "@/lib/email/trash-retention-utils";
 import type { TrashRetentionSettingsResponse } from "@/app/api/settings/trash-retention/types";
@@ -52,26 +54,26 @@ export function TrashRetentionSettings() {
 
 	return (
 		<div>
-			<label className="flex items-start gap-3 rounded-xl bg-neutral-50 p-4">
+			<Label className="flex items-start gap-3 rounded-xl bg-neutral-50 p-4 font-normal leading-normal">
 				<span className="flex-1">
 					<span className="block text-sm font-medium text-neutral-900">{t("settings.trash.title")}</span>
 					<span className="mt-1 block text-sm text-neutral-500">
 						{t("settings.trash.description")}
 					</span>
 				</span>
-				<select
-					value={days ?? ""}
+				<Select
+					value={days === null ? "" : String(days)}
 					disabled={loading}
-					onChange={(event) => void updateDays(event.target.value ? Number(event.target.value) : null)}
-					className="rounded-lg border border-neutral-200 bg-white px-3 py-1.5 text-sm text-neutral-800 disabled:opacity-60"
+					onValueChange={(value) => void updateDays(value ? Number(value) : null)}
+					size="sm"
+					className="text-neutral-800"
 					aria-label={t("settings.trash.title")}
-				>
-					<option value="">{describeTrashRetention(null, t)}</option>
-					{options.map((value) => (
-						<option key={value} value={value}>{describeTrashRetention(value, t)}</option>
-					))}
-				</select>
-			</label>
+					options={[
+						{ value: "", label: describeTrashRetention(null, t) },
+						...options.map((value) => ({ value: String(value), label: describeTrashRetention(value, t) })),
+					]}
+				/>
+			</Label>
 			{error && <p role="alert" className="mt-2 px-4 text-sm text-red-600">{error}</p>}
 		</div>
 	);

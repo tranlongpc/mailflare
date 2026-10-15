@@ -36,3 +36,11 @@ CF_TOKEN=your_api_token_with_zone_email_permissions
 # S3_REGION=us-east-1
 # S3_ACCESS_KEY_ID=AKIA...
 # S3_SECRET_ACCESS_KEY=your_secret_access_key
+
+# Optional, with R2: an R2 API token (Object Read & Write on the BUCKET binding's bucket) lets Drive files upload
+# from the browser straight to R2 instead of through the Worker. B2 and S3 do this with the keys above. Either way
+# the bucket needs a CORS rule allowing PUT from the app's origin, or uploads fall back to going through the app.
+# R2_ACCOUNT_ID=your_account_id
+# R2_ACCESS_KEY_ID=...
+# R2_SECRET_ACCESS_KEY=...
+# R2_BUCKET=mailflare-raw

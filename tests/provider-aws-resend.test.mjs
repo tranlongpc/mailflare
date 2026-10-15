@@ -66,6 +66,21 @@ test("SigV4 matches the AWS post-x-www-form-urlencoded test vector", async () =>
 	);
 });
 
+test("S3 presigned URLs match the AWS query-string authentication example", async () => {
+	const url = await sigv4.presignS3Url({
+		method: "GET",
+		url: new URL("https://examplebucket.s3.amazonaws.com/test.txt"),
+		region: "us-east-1",
+		credentials: { accessKeyId: "AKIAIOSFODNN7EXAMPLE", secretAccessKey: "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY" },
+		expiresIn: 86400,
+		now: new Date("2013-05-24T00:00:00Z"),
+	});
+	const params = new URL(url).searchParams;
+	assert.equal(params.get("X-Amz-Credential"), "AKIAIOSFODNN7EXAMPLE/20130524/us-east-1/s3/aws4_request");
+	assert.equal(params.get("X-Amz-SignedHeaders"), "host");
+	assert.equal(params.get("X-Amz-Signature"), "aeeed9bbccd4d02ee5c0109b86d86835f995330da4c265957d157751f604d404");
+});
+
 test("XML helpers read AWS responses", () => {
 	const doc = "<R><Account>1234</Account><Rules><member><Name>a</Name></member><member><Name>b&amp;c</Name></member></Rules></R>";
 	assert.equal(xml.xmlTag(doc, "Account"), "1234");

@@ -4,9 +4,9 @@ import { useEffect, useState } from "react";
 import { Copy, ShieldCheck, ShieldOff } from "lucide-react";
 import { useLanguage } from "@/components/language-provider";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog } from "@/components/ui/dialog";
+import { FormField } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import type { MfaStatusResponse } from "./types";
 import type { MfaDialogStep } from "./mfa-settings-types";
 import { beginMfaEnrollment, confirmMfaEnrollment, disableMfa, loadMfaStatus, regenerateRecoveryCodes } from "./utils";
@@ -162,52 +162,39 @@ function EnrollDialog({ open, onOpenChange, onDone }: { open: boolean; onOpenCha
 				onOpenChange(next);
 				if (!next) reset();
 			}}
+			title={step === "password" ? t("mfa.enrollTitle") : step === "scan" ? t("mfa.scanTitle") : t("mfa.saveCodesTitle")}
+			description={step === "password" ? t("mfa.enrollDescription") : step === "scan" ? t("mfa.scanDescription") : t("mfa.saveCodesDescription")}
+			className="sm:max-w-[480px]"
 		>
-			<DialogContent className="max-h-[calc(100vh-4rem)] overflow-y-auto sm:max-w-[480px]">
-				{step === "password" && (
-					<form onSubmit={start} className="space-y-4">
-						<DialogHeader>
-							<DialogTitle>{t("mfa.enrollTitle")}</DialogTitle>
-							<DialogDescription>{t("mfa.enrollDescription")}</DialogDescription>
-						</DialogHeader>
-						<div className="space-y-2">
-							<Label htmlFor="mfa-password">{t("common.password")}</Label>
-							<Input id="mfa-password" type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} required autoFocus />
-						</div>
-						{error && <p role="alert" className="text-sm text-red-600">{error}</p>}
-						<Button type="submit" disabled={busy}>{busy ? t("common.pleaseWait") : t("common.continue")}</Button>
-					</form>
-				)}
-				{step === "scan" && (
-					<form onSubmit={confirm} className="space-y-4">
-						<DialogHeader>
-							<DialogTitle>{t("mfa.scanTitle")}</DialogTitle>
-							<DialogDescription>{t("mfa.scanDescription")}</DialogDescription>
-						</DialogHeader>
-						<div role="img" aria-label={t("mfa.scanTitle")} className="mx-auto w-48 rounded-xl border border-neutral-200 bg-white p-2" dangerouslySetInnerHTML={{ __html: qrSvg }} />
-						<details className="text-xs text-neutral-500">
-							<summary className="cursor-pointer">{t("mfa.cantScan")}</summary>
-							<code className="mt-2 block break-all rounded-md bg-neutral-50 p-2 font-mono text-neutral-800">{secret}</code>
-						</details>
-						<div className="space-y-2">
-							<Label htmlFor="mfa-code">{t("mfa.sixDigitCode")}</Label>
-							<Input id="mfa-code" inputMode="numeric" autoComplete="one-time-code" value={code} onChange={(e) => setCode(e.target.value)} placeholder="123 456" required autoFocus />
-						</div>
-						{error && <p role="alert" className="text-sm text-red-600">{error}</p>}
-						<Button type="submit" disabled={busy}>{busy ? t("mfa.checking") : t("mfa.verifyAndTurnOn")}</Button>
-					</form>
-				)}
-				{step === "codes" && (
-					<div className="space-y-4">
-						<DialogHeader>
-							<DialogTitle>{t("mfa.saveCodesTitle")}</DialogTitle>
-							<DialogDescription>{t("mfa.saveCodesDescription")}</DialogDescription>
-						</DialogHeader>
-						<RecoveryCodesList codes={recoveryCodes} />
-						<Button type="button" onClick={() => onOpenChange(false)}>{t("common.done")}</Button>
-					</div>
-				)}
-			</DialogContent>
+			{step === "password" && (
+				<form onSubmit={start} className="space-y-4">
+					<FormField label={t("common.password")} htmlFor="mfa-password">
+						<Input id="mfa-password" type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} required autoFocus />
+					</FormField>
+					{error && <p role="alert" className="text-sm text-red-600">{error}</p>}
+					<Button type="submit" disabled={busy}>{busy ? t("common.pleaseWait") : t("common.continue")}</Button>
+				</form>
+			)}
+			{step === "scan" && (
+				<form onSubmit={confirm} className="space-y-4">
+					<div role="img" aria-label={t("mfa.scanTitle")} className="mx-auto w-48 rounded-xl border border-neutral-200 bg-white p-2" dangerouslySetInnerHTML={{ __html: qrSvg }} />
+					<details className="text-xs text-neutral-500">
+						<summary className="cursor-pointer">{t("mfa.cantScan")}</summary>
+						<code className="mt-2 block break-all rounded-md bg-neutral-50 p-2 font-mono text-neutral-800">{secret}</code>
+					</details>
+					<FormField label={t("mfa.sixDigitCode")} htmlFor="mfa-code">
+						<Input id="mfa-code" inputMode="numeric" autoComplete="one-time-code" value={code} onChange={(e) => setCode(e.target.value)} placeholder="123 456" required autoFocus />
+					</FormField>
+					{error && <p role="alert" className="text-sm text-red-600">{error}</p>}
+					<Button type="submit" disabled={busy}>{busy ? t("mfa.checking") : t("mfa.verifyAndTurnOn")}</Button>
+				</form>
+			)}
+			{step === "codes" && (
+				<div className="space-y-4">
+					<RecoveryCodesList codes={recoveryCodes} />
+					<Button type="button" onClick={() => onOpenChange(false)}>{t("common.done")}</Button>
+				</div>
+			)}
 		</Dialog>
 	);
 }
@@ -237,25 +224,17 @@ function DisableDialog({ open, onOpenChange, onDone }: { open: boolean; onOpenCh
 	}
 
 	return (
-		<Dialog open={open} onOpenChange={onOpenChange}>
-			<DialogContent className="max-h-[calc(100vh-4rem)] overflow-y-auto sm:max-w-[480px]">
-				<form onSubmit={submit} className="space-y-4">
-					<DialogHeader>
-						<DialogTitle>{t("mfa.turnOffTitle")}</DialogTitle>
-						<DialogDescription>{t("mfa.turnOffDescription")}</DialogDescription>
-					</DialogHeader>
-					<div className="space-y-2">
-						<Label htmlFor="mfa-off-password">{t("common.password")}</Label>
-						<Input id="mfa-off-password" type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} required />
-					</div>
-					<div className="space-y-2">
-						<Label htmlFor="mfa-off-code">{t("mfa.code")}</Label>
-						<Input id="mfa-off-code" inputMode="numeric" autoComplete="one-time-code" value={code} onChange={(e) => setCode(e.target.value)} required />
-					</div>
-					{error && <p role="alert" className="text-sm text-red-600">{error}</p>}
-					<Button type="submit" variant="destructive" disabled={busy}>{busy ? t("common.pleaseWait") : t("mfa.turnOff")}</Button>
-				</form>
-			</DialogContent>
+		<Dialog open={open} onOpenChange={onOpenChange} title={t("mfa.turnOffTitle")} description={t("mfa.turnOffDescription")} className="sm:max-w-[480px]">
+			<form onSubmit={submit} className="space-y-4">
+				<FormField label={t("common.password")} htmlFor="mfa-off-password">
+					<Input id="mfa-off-password" type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+				</FormField>
+				<FormField label={t("mfa.code")} htmlFor="mfa-off-code">
+					<Input id="mfa-off-code" inputMode="numeric" autoComplete="one-time-code" value={code} onChange={(e) => setCode(e.target.value)} required />
+				</FormField>
+				{error && <p role="alert" className="text-sm text-red-600">{error}</p>}
+				<Button type="submit" variant="destructive" disabled={busy}>{busy ? t("common.pleaseWait") : t("mfa.turnOff")}</Button>
+			</form>
 		</Dialog>
 	);
 }
@@ -289,32 +268,24 @@ function RecoveryCodesDialog({ open, onOpenChange, onDone }: { open: boolean; on
 				onOpenChange(next);
 				if (!next) setCodes(null);
 			}}
+			title={codes ? t("mfa.newCodesTitle") : t("mfa.generateTitle")}
+			description={codes ? t("mfa.newCodesDescription") : t("mfa.generateDescription")}
+			className="sm:max-w-[480px]"
 		>
-			<DialogContent className="max-h-[calc(100vh-4rem)] overflow-y-auto sm:max-w-[480px]">
-				{codes ? (
-					<div className="space-y-4">
-						<DialogHeader>
-							<DialogTitle>{t("mfa.newCodesTitle")}</DialogTitle>
-							<DialogDescription>{t("mfa.newCodesDescription")}</DialogDescription>
-						</DialogHeader>
-						<RecoveryCodesList codes={codes} />
-						<Button type="button" onClick={() => onOpenChange(false)}>{t("common.done")}</Button>
-					</div>
-				) : (
-					<form onSubmit={submit} className="space-y-4">
-						<DialogHeader>
-							<DialogTitle>{t("mfa.generateTitle")}</DialogTitle>
-							<DialogDescription>{t("mfa.generateDescription")}</DialogDescription>
-						</DialogHeader>
-						<div className="space-y-2">
-							<Label htmlFor="rc-password">{t("common.password")}</Label>
-							<Input id="rc-password" type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} required autoFocus />
-						</div>
-						{error && <p role="alert" className="text-sm text-red-600">{error}</p>}
-						<Button type="submit" disabled={busy}>{busy ? t("common.pleaseWait") : t("mfa.generate")}</Button>
-					</form>
-				)}
-			</DialogContent>
+			{codes ? (
+				<div className="space-y-4">
+					<RecoveryCodesList codes={codes} />
+					<Button type="button" onClick={() => onOpenChange(false)}>{t("common.done")}</Button>
+				</div>
+			) : (
+				<form onSubmit={submit} className="space-y-4">
+					<FormField label={t("common.password")} htmlFor="rc-password">
+						<Input id="rc-password" type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} required autoFocus />
+					</FormField>
+					{error && <p role="alert" className="text-sm text-red-600">{error}</p>}
+					<Button type="submit" disabled={busy}>{busy ? t("common.pleaseWait") : t("mfa.generate")}</Button>
+				</form>
+			)}
 		</Dialog>
 	);
 }

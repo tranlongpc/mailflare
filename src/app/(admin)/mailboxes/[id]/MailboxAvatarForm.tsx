@@ -2,10 +2,12 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Camera, LoaderCircle, User } from "lucide-react";
+import { Camera, User } from "lucide-react";
 import { useLanguage } from "@/components/language-provider";
 import { dispatchMailboxAvatarChanged } from "@/lib/mailboxes/avatar-client";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Spinner } from "@/components/ui/spinner";
 import { ProgressiveAvatarImage } from "@/components/progressive-avatar-image";
 import type { MailboxAvatarFormProps } from "./types";
 import {
@@ -65,15 +67,17 @@ export default function MailboxAvatarForm({
 			<Input
 				ref={inputRef}
 				type="file"
+				variant="bare"
 				accept={MAILBOX_AVATAR_ACCEPT}
 				className="hidden"
 				onChange={onPick}
 			/>
-			<button
+			<Button
 				type="button"
+				variant="unstyled"
 				onClick={() => inputRef.current?.click()}
 				disabled={busy}
-				className="group relative h-24 w-24 overflow-hidden rounded-full border border-neutral-200 bg-blue-600 text-white shadow-sm outline-none ring-blue-500 transition focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-wait"
+				className="group relative h-24 w-24 overflow-hidden rounded-full border border-neutral-200 bg-blue-600 text-white shadow-sm outline-none ring-blue-500 transition focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-wait disabled:opacity-100"
 				aria-label={hasAvatar ? t("avatar.change", { name }) : t("avatar.upload", { name })}
 			>
 				{hasAvatar ? (
@@ -90,7 +94,7 @@ export default function MailboxAvatarForm({
 				)}
 				<span className="absolute inset-0 flex items-center justify-center bg-neutral-950/55 opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">
 					{busy ? (
-						<LoaderCircle className="h-6 w-6 animate-spin" />
+						<Spinner className="h-6 w-6" />
 					) : (
 						<span className="flex flex-col items-center gap-1 text-[11px] font-medium">
 							<Camera className="h-5 w-5" />
@@ -98,7 +102,7 @@ export default function MailboxAvatarForm({
 						</span>
 					)}
 				</span>
-			</button>
+			</Button>
 			{status && <p role="alert" className="max-w-xs text-xs text-red-600">{status}</p>}
 		</div>
 	);

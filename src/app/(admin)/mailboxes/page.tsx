@@ -7,17 +7,11 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Plus, UsersRound } from "lucide-react";
 import { useLanguage } from "@/components/language-provider";
+import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
-import {
-	Dialog,
-	DialogContent,
-	DialogDescription,
-	DialogHeader,
-	DialogTitle,
-	DialogTrigger,
-} from "@/components/ui/dialog";
+import { Dialog } from "@/components/ui/dialog";
+import { FormField } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { List, ListRow } from "@/components/ui/list";
 import { SectionRowSkeleton } from "@/components/page-skeletons";
@@ -124,71 +118,70 @@ export default function MailboxesPage() {
 
 	return (
 		<div className="space-y-6">
-			<div className="flex items-center justify-between gap-4">
-				<h1 className="text-2xl md:text-3xl font-medium">{t("mailboxes.title")}</h1>
-				<Dialog open={createOpen} onOpenChange={setCreateOpen}>
-					<DialogTrigger asChild>
-						<Button className={mobilePrimaryActionClass}>
-							<Plus className="h-4 w-4" />
-							{t("mailboxes.new")}
-						</Button>
-					</DialogTrigger>
-					<DialogContent>
-						<DialogHeader>
-							<DialogTitle>{t("mailboxes.createTitle")}</DialogTitle>
-							<DialogDescription>{t("mailboxes.createDescription")}</DialogDescription>
-						</DialogHeader>
+			<PageHeader
+				className="items-center"
+				title={t("mailboxes.title")}
+				actions={
+					<Button className={mobilePrimaryActionClass} onClick={() => setCreateOpen(true)}>
+						<Plus className="h-4 w-4" />
+						{t("mailboxes.new")}
+					</Button>
+				}
+			/>
+				<Dialog
+					open={createOpen}
+					onOpenChange={setCreateOpen}
+					title={t("mailboxes.createTitle")}
+					description={t("mailboxes.createDescription")}
+				>
 						<div className="space-y-4">
 							{mailboxes.data?.canCreateShared && (
-								<div className="space-y-2">
-									<Label htmlFor="mailbox-type">{t("mailboxes.type")}</Label>
+								<FormField label={t("mailboxes.type")} htmlFor="mailbox-type">
 									<Select
 										id="mailbox-type"
 										value={mailboxType}
-										onChange={(event) => setMailboxType(event.target.value as "personal" | "shared")}
-										className="flex h-10 w-full rounded-md border border-neutral-200 bg-white px-3 text-sm shadow-sm shadow-neutral-200/50 focus-visible:border-blue-600 focus-visible:outline-none"
-									>
-										<option value="personal">{t("mailboxes.personalInbox")}</option>
-										<option value="shared">{t("mailboxes.sharedInbox")}</option>
-									</Select>
-								</div>
+										onValueChange={(value) => setMailboxType(value as "personal" | "shared")}
+										containerClassName="w-full rounded-md shadow-sm shadow-neutral-200/50"
+										className="text-sm"
+										options={[
+											{ value: "personal", label: t("mailboxes.personalInbox") },
+											{ value: "shared", label: t("mailboxes.sharedInbox") },
+										]}
+									/>
+								</FormField>
 							)}
 							{mailboxType === "personal" ? (
-							<div className="space-y-2">
-								<Label htmlFor="mailbox-owner">{t("mailboxes.account")}</Label>
+							<FormField label={t("mailboxes.account")} htmlFor="mailbox-owner">
 								<Select
 									id="mailbox-owner"
 									value={ownerUserId}
-									onChange={(event) => {
-										const owner = mailboxOwners.find((item) => item.id === event.target.value);
-										setOwnerUserId(event.target.value);
+									onValueChange={(value) => {
+										const owner = mailboxOwners.find((item) => item.id === value);
+										setOwnerUserId(value);
 										if (owner) setDisplayName(owner.name);
 									}}
-									className="flex h-10 w-full rounded-md border border-neutral-200 bg-white px-3 text-sm shadow-sm shadow-neutral-200/50 focus-visible:border-blue-600 focus-visible:outline-none"
-								>
-									{mailboxOwners.map((owner) => (
-										<option key={owner.id} value={owner.id}>
-											{owner.name} ({owner.email})
-										</option>
-									))}
-								</Select>
-							</div>
+									containerClassName="w-full rounded-md shadow-sm shadow-neutral-200/50"
+									className="text-sm"
+									options={mailboxOwners.map((owner) => ({
+										value: owner.id,
+										label: `${owner.name} (${owner.email})`,
+									}))}
+								/>
+							</FormField>
 							) : (
 								<p className="rounded-2xl bg-blue-50 px-4 py-3 text-sm text-blue-800">
 									{t("mailboxes.sharedHint")}
 								</p>
 							)}
-							<div className="space-y-2">
-								<Label htmlFor="mailbox-name">{t("common.name")}</Label>
+							<FormField label={t("common.name")} htmlFor="mailbox-name">
 								<Input
 									id="mailbox-name"
 									value={displayName}
 									onChange={(event) => setDisplayName(event.target.value)}
 									placeholder={t("mailboxes.namePlaceholder")}
 								/>
-							</div>
-							<div className="space-y-2">
-								<Label htmlFor="mailbox-username">{t("mailboxes.emailAddress")}</Label>
+							</FormField>
+							<FormField label={t("mailboxes.emailAddress")} htmlFor="mailbox-username">
 								<div className="flex h-10 overflow-hidden rounded-md border border-neutral-200 bg-white shadow-sm shadow-neutral-200/50 focus-within:border-blue-600">
 									<Input
 										id="mailbox-username"
@@ -200,19 +193,19 @@ export default function MailboxesPage() {
 									<span className="flex items-center text-sm text-neutral-500">@</span>
 									<Select
 										aria-label={t("accounts.domain")}
-										className="min-w-0 max-w-[55%] bg-transparent px-3 text-sm text-neutral-700 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+										variant="bare"
+										containerClassName="min-w-0 max-w-[55%]"
+										className="pl-3 text-sm text-neutral-700"
 										value={domainId}
-										onChange={(event) => setDomainId(event.target.value)}
-									>
-										<option value="">{t("accounts.selectDomain")}</option>
-										{(domains.data?.domains ?? []).map((domain) => (
-											<option key={domain.id} value={domain.id}>
-												{domain.hostname}
-											</option>
-										))}
-									</Select>
+										onValueChange={setDomainId}
+										placeholder={t("accounts.selectDomain")}
+										options={(domains.data?.domains ?? []).map((domain) => ({
+											value: domain.id,
+											label: domain.hostname,
+										}))}
+									/>
 								</div>
-							</div>
+							</FormField>
 							{create.isError && (
 								<p role="alert" className="text-sm text-red-600">{(create.error as Error).message}</p>
 							)}
@@ -223,9 +216,7 @@ export default function MailboxesPage() {
 								{create.isPending ? t("accounts.creating") : t("mailboxes.createButton")}
 							</Button>
 						</div>
-					</DialogContent>
 				</Dialog>
-			</div>
 			<section className="space-y-3">
 				{/* <div className="flex items-center justify-between">
 					<span className="text-sm text-neutral-500">

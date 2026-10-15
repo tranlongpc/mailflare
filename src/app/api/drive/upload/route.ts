@@ -5,11 +5,13 @@ import { newId } from "@/lib/ids";
 import { authorizeDrive } from "@/lib/drive/auth";
 import { getDriveItem, getDriveRole, toDriveItemDtos } from "@/lib/drive/access";
 import { getDriveStorageLimit, getDriveStorageUsed } from "@/lib/drive/storage";
+import { getDirectStorage, listUploadedParts } from "@/lib/storage/direct";
 import { canEditDrive, DRIVE_MAX_FILE_BYTES, DRIVE_PART_BYTES, DRIVE_UPLOAD_RESUME_MS, driveObjectKey, normalizeDriveName } from "@/lib/drive/utils";
 
 /**
- * Starts an upload. The file itself is then sent as raw (non multipart/form-data) PUT requests, because the runtime
- * treats every multipart POST as a server action and rejects bodies over 1 MB.
+ * Starts an upload. With `direct`, the browser asks for a signed URL per part and sends it straight to the bucket;
+ * otherwise (or when the bucket refuses the browser) parts come here as raw (non multipart/form-data) PUT requests,
+ * because the runtime treats every multipart POST as a server action and rejects bodies over 1 MB.
  */
 export async function POST(request: Request) {
 	const auth = await authorizeDrive(request, true);
@@ -32,6 +34,7 @@ export async function POST(request: Request) {
 	}
 
 	const fingerprint = typeof body.fingerprint === "string" ? body.fingerprint.slice(0, 100) : "";
+	const direct = await getDirectStorage(env);
 
 	// Uploads nobody came back to are discarded so they do not pile up.
 	const stale = await db.select().from(driveItems).where(and(eq(driveItems.ownerId, ownerId), isNotNull(driveItems.uploadId), lt(driveItems.updatedAt, new Date(Date.now() - DRIVE_UPLOAD_RESUME_MS)))).limit(20);
@@ -45,9 +48,14 @@ export async function POST(request: Request) {
 	if (fingerprint && size > 0) {
 		const [pending] = await db.select().from(driveItems).where(and(eq(driveItems.ownerId, ownerId), parentId ? eq(driveItems.parentId, parentId) : isNull(driveItems.parentId), eq(driveItems.name, name), eq(driveItems.size, size), eq(driveItems.uploadFingerprint, fingerprint), isNotNull(driveItems.uploadId))).limit(1);
 		if (pending?.uploadPartSize) {
-			const done = await db.select({ partNumber: driveUploadParts.partNumber }).from(driveUploadParts).where(eq(driveUploadParts.itemId, pending.id));
+			const done = new Set((await db.select({ partNumber: driveUploadParts.partNumber }).from(driveUploadParts).where(eq(driveUploadParts.itemId, pending.id))).map((part) => part.partNumber));
+			// Parts sent straight to the bucket are recorded only there.
+			if (direct) {
+				const key = pending.r2Key ?? driveObjectKey(pending.ownerId, pending.id);
+				for (const part of await listUploadedParts(direct, key, pending.uploadId!).catch(() => [])) done.add(part.partNumber);
+			}
 			await db.update(driveItems).set({ updatedAt: new Date() }).where(eq(driveItems.id, pending.id));
-			return NextResponse.json({ id: pending.id, partSize: pending.uploadPartSize, parts: Math.ceil(size / pending.uploadPartSize), uploaded: done.map((part) => part.partNumber), resumed: true });
+			return NextResponse.json({ id: pending.id, partSize: pending.uploadPartSize, parts: Math.ceil(size / pending.uploadPartSize), uploaded: [...done], resumed: true, direct: !!direct });
 		}
 	}
 
@@ -76,5 +84,5 @@ export async function POST(request: Request) {
 	row.uploadFingerprint = fingerprint || null;
 	try { await db.insert(driveItems).values(row); }
 	catch (error) { await upload.abort(); throw error; }
-	return NextResponse.json({ id, partSize: DRIVE_PART_BYTES, parts: Math.ceil(size / DRIVE_PART_BYTES), uploaded: [] });
+	return NextResponse.json({ id, partSize: DRIVE_PART_BYTES, parts: Math.ceil(size / DRIVE_PART_BYTES), uploaded: [], direct: !!direct });
 }

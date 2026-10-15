@@ -4,8 +4,8 @@ import { useEffect, useState } from "react";
 import { useLanguage } from "@/components/language-provider";
 import { useSelectedMailbox } from "@/components/mailbox-provider";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
+import { FormField } from "@/components/ui/form";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import type { MailboxAutoReplySettings } from "./types";
@@ -87,7 +87,7 @@ export function MailboxAutoReplyForm() {
 
   return (
     <form onSubmit={onSubmit} className="space-y-4">
-      <label className="flex items-start gap-3 rounded-xl bg-neutral-50 p-4">
+      <Label className="flex items-start gap-3 rounded-xl bg-neutral-50 p-4 font-normal leading-normal">
         <span className="flex-1">
           <span className="block text-sm font-medium text-neutral-900">
             {t("settings.autoReply.enableFor", { address })}
@@ -102,11 +102,10 @@ export function MailboxAutoReplyForm() {
           onCheckedChange={(enabled) => setSettings({ ...settings, enabled })}
           disabled={!canManage || saving}
         />
-      </label>
+      </Label>
       {settings.enabled && (
         <>
-          <div className="space-y-2">
-            <Label htmlFor="autoReplySubject">{t("settings.autoReply.subject")}</Label>
+          <FormField label={t("settings.autoReply.subject")} htmlFor="autoReplySubject">
             <Input
               id="autoReplySubject"
               value={settings.subject}
@@ -116,9 +115,8 @@ export function MailboxAutoReplyForm() {
               placeholder={t("settings.autoReply.subjectPlaceholder")}
               disabled={!canManage || saving}
             />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="autoReplyBody">{t("settings.autoReply.message")}</Label>
+          </FormField>
+          <FormField label={t("settings.autoReply.message")} htmlFor="autoReplyBody">
             <Textarea
               id="autoReplyBody"
               value={settings.body}
@@ -129,7 +127,7 @@ export function MailboxAutoReplyForm() {
               rows={7}
               disabled={!canManage || saving}
             />
-          </div>
+          </FormField>
           <div className="flex items-center gap-3">
             <Button type="submit" disabled={!canManage || saving || !changed}>
               {saving ? t("common.saving") : t("settings.autoReply.save")}

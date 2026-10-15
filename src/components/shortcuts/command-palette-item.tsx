@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { Button } from "@/components/ui/button";
 import type { CommandItem } from "./types";
 
 interface CommandPaletteItemProps {
@@ -21,9 +22,10 @@ export function CommandPaletteItem({
   const Icon = item.icon;
 
   return (
-    <button
+    <Button
       id={id}
       type="button"
+      variant="unstyled"
       role="option"
       aria-selected={isActive}
       tabIndex={-1}
@@ -71,6 +73,6 @@ export function CommandPaletteItem({
           {item.shortcut}
         </kbd>
       )}
-    </button>
+    </Button>
   );
 }

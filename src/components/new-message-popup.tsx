@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Mail, X } from "lucide-react";
 import { getEmailDisplayName } from "@/lib/email/address";
 import { useLanguage } from "@/components/language-provider";
+import { Button } from "@/components/ui/button";
 import type { NewMessagePopupProps } from "./new-message-popup-types";
 
 export function NewMessagePopup({
@@ -32,14 +33,15 @@ export function NewMessagePopup({
 						{t("notification.from", { sender: notification.fromName ?? getEmailDisplayName(notification.from) })}
 					</p>
 				</Link>
-				<button
+				<Button
 					type="button"
+					variant="unstyled"
 					onClick={onDismiss}
 					className="rounded-full p-1 text-neutral-500 hover:bg-neutral-100 hover:text-neutral-700"
 				>
 					<X className="h-4 w-4" />
 					<span className="sr-only">{t("notification.dismiss")}</span>
-				</button>
+				</Button>
 			</div>
 		</div>
 	);

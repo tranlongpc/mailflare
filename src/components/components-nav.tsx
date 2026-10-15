@@ -8,6 +8,7 @@ import { getMessageDragData } from "@/lib/messages/drag-utils";
 import { useSelectedMailbox } from "./mailbox-provider";
 import { useSidebar } from "./sidebar-state";
 import { useCompose } from "./compose/compose-context";
+import { Button } from "./ui/button";
 import { Tooltip } from "./ui/tooltip";
 import {
   preloadMailboxPage,
@@ -47,12 +48,12 @@ export function NavItem({ link, iconClassName, labelClassName, wrap }: Props) {
   if (!Icon) return null;
   const active = pathname === link.href || pathname.startsWith(`${link.href}/`);
   const classes = cn(
-    "flex h-9 items-center gap-3 rounded-r-full text-sm text-neutral-700 transition-colors max-md:min-h-11 max-md:text-base",
+    "flex h-9 items-center gap-3 rounded-full text-sm text-neutral-700 transition-colors max-md:min-h-11 max-md:text-base",
     minimal && "relative mx-auto w-10 justify-center rounded-full px-0",
-    active ? "bg-blue-100 text-blue-900 font-semibold" : "hover:bg-neutral-200/60",
+    active ? "bg-blue-100 font-semibold text-blue-900" : "hover:bg-neutral-200/60",
     dragOver && "bg-blue-50 text-blue-900 ring-1 ring-blue-200",
     link.primary &&
-    "mb-3 h-12 w-fit rounded-2xl bg-blue-100 px-5 text-blue-950 shadow-sm hover:bg-blue-200",
+    "mb-3 h-12 w-fit rounded-2xl bg-blue-600 px-5 text-white shadow-sm hover:bg-blue-700",
     link.count && "font-semibold",
     link.primary && minimal && "h-11 w-11 rounded-2xl px-0",
     wrap && !minimal && "h-auto min-h-9 items-start py-2",
@@ -77,10 +78,11 @@ export function NavItem({ link, iconClassName, labelClassName, wrap }: Props) {
 
   if (link.href === "/compose") {
     const composeButton = (
-      <button
+      <Button
+        variant="unstyled"
         type="button"
         onClick={openComposer}
-        className={cn(!minimal && "ml-3", classes)}
+        className={classes}
         aria-label={minimal ? link.label : undefined}
         {...dropProps}
       >
@@ -100,7 +102,7 @@ export function NavItem({ link, iconClassName, labelClassName, wrap }: Props) {
             {link.count > 99 ? "99+" : link.count}
           </span>
         )}
-      </button>
+      </Button>
     );
     return minimal && link.label ? <Tooltip label={link.label} placement="right" className="mx-auto">{composeButton}</Tooltip> : composeButton;
   }
@@ -143,7 +145,7 @@ export function NavItem({ link, iconClassName, labelClassName, wrap }: Props) {
       href={link.href}
       onClick={navigate}
       aria-label={minimal ? link.label : undefined}
-      className={cn(!minimal && "pl-6", classes)}
+      className={cn(!minimal && "pl-3", classes)}
       {...dropProps}
     >
       <Icon

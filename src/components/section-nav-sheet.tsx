@@ -5,6 +5,7 @@ import { ChevronUp } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 import { useIsMobile } from "./sidebar-mobile-utils";
+import { Button } from "./ui/button";
 
 type SectionNavSheetProps = {
 	label: string;
@@ -35,7 +36,8 @@ export function SectionNavSheet({ label, title, children, className }: SectionNa
 
 	return (
 		<>
-			<button
+			<Button
+				variant="unstyled"
 				type="button"
 				onClick={() => setOpen(true)}
 				aria-haspopup="dialog"
@@ -44,7 +46,7 @@ export function SectionNavSheet({ label, title, children, className }: SectionNa
 			>
 				<span className="max-w-[60vw] truncate">{label}</span>
 				<ChevronUp size={16} aria-hidden="true" />
-			</button>
+			</Button>
 			<div
 				onClick={() => setOpen(false)}
 				aria-hidden="true"

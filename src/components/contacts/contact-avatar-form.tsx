@@ -1,10 +1,12 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { Camera, LoaderCircle } from "lucide-react";
+import { Camera } from "lucide-react";
 import { dispatchContactAvatarChanged } from "@/lib/contacts/avatar-client";
 import { normalizeEmailAddress } from "@/lib/email/address";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Spinner } from "@/components/ui/spinner";
 import { useLanguage } from "@/components/language-provider";
 import { ContactAvatar } from "./contact-avatar";
 import type { ContactAvatarFormProps } from "./contact-avatar-form-types";
@@ -68,11 +70,12 @@ export function ContactAvatarForm({
 		<div className="flex flex-col items-start gap-2">
 			<Input ref={inputRef} type="file" accept={CONTACT_AVATAR_ACCEPT} className="hidden" onChange={onPick} />
 			<div className="flex items-center gap-3">
-				<button
+				<Button
 					type="button"
+					variant="unstyled"
 					onClick={() => inputRef.current?.click()}
 					disabled={busy}
-					className="group relative h-14 w-14 overflow-hidden rounded-full outline-none ring-blue-500 focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-wait"
+					className="group relative h-14 w-14 overflow-hidden rounded-full outline-none ring-blue-500 focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-wait disabled:opacity-100"
 					aria-label={hasAvatar ? t("avatar.change", { name }) : t("avatar.upload", { name })}
 				>
 					<ContactAvatar
@@ -83,16 +86,16 @@ export function ContactAvatarForm({
 						className="h-14 w-14 text-lg"
 					/>
 					<span className="absolute inset-0 flex items-center justify-center bg-neutral-950/55 opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">
-						{busy ? <LoaderCircle className="h-5 w-5 animate-spin text-white" /> : <Camera className="h-5 w-5 text-white" />}
+						{busy ? <Spinner className="h-5 w-5 text-white" /> : <Camera className="h-5 w-5 text-white" />}
 					</span>
-				</button>
+				</Button>
 				<div>
 					<p className="text-sm font-medium text-neutral-900">{t("avatar.title")}</p>
 					<p className="text-xs text-neutral-500">{t("avatar.contactHint")}</p>
 					{hasAvatar && (
-						<button type="button" onClick={() => void onRemove()} disabled={busy} className="mt-1 text-xs font-medium text-blue-600 hover:underline disabled:text-neutral-400">
+						<Button type="button" variant="unstyled" onClick={() => void onRemove()} disabled={busy} className="mt-1 text-xs font-medium text-blue-600 hover:underline disabled:text-neutral-400 disabled:opacity-100">
 							{t("avatar.remove")}
-						</button>
+						</Button>
 					)}
 				</div>
 			</div>

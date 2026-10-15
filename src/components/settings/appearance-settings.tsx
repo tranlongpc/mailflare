@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useLanguage } from "@/components/language-provider";
 import type { TranslationKey } from "@/lib/i18n/types";
+import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import {
 	isThemePreference,
@@ -30,7 +31,7 @@ export function AppearanceSettings() {
 	}, []);
 
 	return (
-		<label className="flex items-start gap-3 rounded-xl bg-neutral-50 p-4">
+		<Label className="flex items-start gap-3 rounded-xl bg-neutral-50 p-4 font-normal leading-normal">
 			<span className="flex-1">
 				<span className="block text-sm font-medium text-neutral-900">{t("settings.theme.label")}</span>
 				<span className="mt-1 block text-sm text-neutral-500">
@@ -40,20 +41,14 @@ export function AppearanceSettings() {
 			<Select
 				value={preference}
 				aria-label={t("settings.theme.label")}
-				className="py-1.5 text-sm text-neutral-900"
-				onChange={(event) => {
-					const next = event.target.value;
+				size="sm"
+				options={OPTIONS.map((option) => ({ value: option.value, label: t(option.labelKey) }))}
+				onValueChange={(next) => {
 					if (!isThemePreference(next)) return;
 					setPreference(next);
 					saveThemePreference(next);
 				}}
-			>
-				{OPTIONS.map((option) => (
-					<option key={option.value} value={option.value}>
-						{t(option.labelKey)}
-					</option>
-				))}
-			</Select>
-		</label>
+			/>
+		</Label>
 	);
 }

@@ -7,14 +7,8 @@ import { Folder, Plus, ShieldAlert, Trash2 } from "lucide-react";
 import { useLanguage } from "@/components/language-provider";
 import { useSelectedMailbox } from "@/components/mailbox-provider";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Card } from "@/components/ui/card";
+import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RoutingRuleSelect } from "./domain-routing/routing-rule-select";
@@ -146,7 +140,7 @@ export function InboxRules() {
           {t("rules.new")}
         </Button>
       </div>
-      <div className="rounded-3xl bg-white p-6">
+      <Card>
         {(rules.data?.rules ?? []).length === 0 && (
           <p className="text-sm text-neutral-500">{t("rules.none")}</p>
         )}
@@ -197,109 +191,104 @@ export function InboxRules() {
             </div>
           ))}
         </div>
-      </div>
+      </Card>
 
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-h-[calc(100vh-4rem)] overflow-y-auto sm:max-w-[560px]">
-          <DialogHeader>
-            <DialogTitle>
-              {editingRule ? t("rules.update") : t("rules.new")}
-            </DialogTitle>
-            <DialogDescription>
-              {t("rules.dialogDescription")}
-            </DialogDescription>
-          </DialogHeader>
-          <form onSubmit={onSubmit} className="space-y-4">
-            <div className="grid grid-cols-1 items-end gap-4 sm:grid-cols-2">
-              <div className="grid min-w-0 gap-2">
-                <Label htmlFor="matchField">{t("rules.fieldLabel")}</Label>
-                <RoutingRuleSelect
-                  id="matchField"
-                  value={matchField}
-                  onChange={(event) =>
-                    setMatchField(
-                      event.target.value as "email" | "content" | "title",
-                    )
-                  }
-                >
-                  <option value="email">{t("rules.field.email")}</option>
-                  <option value="content">{t("rules.field.content")}</option>
-                  <option value="title">{t("rules.field.title")}</option>
-                </RoutingRuleSelect>
-              </div>
-              <div className="grid min-w-0 gap-2">
-                <Label htmlFor="matchOperator">{t("rules.matchLabel")}</Label>
-                <RoutingRuleSelect
-                  id="matchOperator"
-                  value={matchOperator}
-                  onChange={(event) =>
-                    setMatchOperator(event.target.value as "contains" | "exact")
-                  }
-                >
-                  <option value="contains">{t("rules.operatorOption.contains")}</option>
-                  <option value="exact">{t("rules.operatorOption.exact")}</option>
-                </RoutingRuleSelect>
-              </div>
-            </div>
-            <div className="grid grid-cols-1 items-end gap-4 sm:grid-cols-2">
-              <div className="grid min-w-0 gap-2">
-                <Label htmlFor="matchValue">{t("rules.valueLabel")}</Label>
-                <Input
-                  id="matchValue"
-                  value={matchValue}
-                  onChange={(event) => setMatchValue(event.target.value)}
-                  placeholder={
-                    matchField === "email" ? t("rules.valuePlaceholderEmail") : t("rules.valuePlaceholderOther")
-                  }
-                />
-              </div>
-              <div className="grid min-w-0 gap-2">
-                <Label htmlFor="destination">{t("rules.destination")}</Label>
-                <RoutingRuleSelect
-                  id="destination"
-                  value={destination}
-                  onChange={(event) => setDestination(event.target.value)}
-                >
-                  <option value="">{t("rules.selectDestination")}</option>
-                  <option value="spam">{t("navigation.spam")}</option>
-                  <option value="trash">{t("navigation.trash")}</option>
-                  {(folders.data?.folders ?? []).map((folder) => (
-                    <option key={folder.id} value={`folder:${folder.id}`}>
-                      {folder.name}
-                    </option>
-                  ))}
-                </RoutingRuleSelect>
-              </div>
-            </div>
-            {save.isError && (
-              <p role="alert" className="text-sm text-red-600">{save.error.message}</p>
-            )}
-            <div className="flex justify-end gap-2 border-t border-neutral-200 pt-4">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setDialogOpen(false)}
-              >
-                {t("common.cancel")}
-              </Button>
-              <Button
-                type="submit"
-                disabled={
-                  !mailboxId ||
-                  !destination ||
-                  !matchValue.trim() ||
-                  save.isPending
+      <Dialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        title={editingRule ? t("rules.update") : t("rules.new")}
+        description={t("rules.dialogDescription")}
+      >
+        <form onSubmit={onSubmit} className="space-y-4">
+          <div className="grid grid-cols-1 items-end gap-4 sm:grid-cols-2">
+            <div className="grid min-w-0 gap-2">
+              <Label htmlFor="matchField">{t("rules.fieldLabel")}</Label>
+              <RoutingRuleSelect
+                id="matchField"
+                value={matchField}
+                onValueChange={(value) =>
+                  setMatchField(value as "email" | "content" | "title")
                 }
-              >
-                {save.isPending
-                  ? t("common.saving")
-                  : editingRule
-                    ? t("rules.saveChanges")
-                    : t("rules.create")}
-              </Button>
+                options={[
+                  { value: "email", label: t("rules.field.email") },
+                  { value: "content", label: t("rules.field.content") },
+                  { value: "title", label: t("rules.field.title") },
+                ]}
+              />
             </div>
-          </form>
-        </DialogContent>
+            <div className="grid min-w-0 gap-2">
+              <Label htmlFor="matchOperator">{t("rules.matchLabel")}</Label>
+              <RoutingRuleSelect
+                id="matchOperator"
+                value={matchOperator}
+                onValueChange={(value) =>
+                  setMatchOperator(value as "contains" | "exact")
+                }
+                options={[
+                  { value: "contains", label: t("rules.operatorOption.contains") },
+                  { value: "exact", label: t("rules.operatorOption.exact") },
+                ]}
+              />
+            </div>
+          </div>
+          <div className="grid grid-cols-1 items-end gap-4 sm:grid-cols-2">
+            <div className="grid min-w-0 gap-2">
+              <Label htmlFor="matchValue">{t("rules.valueLabel")}</Label>
+              <Input
+                id="matchValue"
+                value={matchValue}
+                onChange={(event) => setMatchValue(event.target.value)}
+                placeholder={
+                  matchField === "email" ? t("rules.valuePlaceholderEmail") : t("rules.valuePlaceholderOther")
+                }
+              />
+            </div>
+            <div className="grid min-w-0 gap-2">
+              <Label htmlFor="destination">{t("rules.destination")}</Label>
+              <RoutingRuleSelect
+                id="destination"
+                value={destination}
+                onValueChange={setDestination}
+                placeholder={t("rules.selectDestination")}
+                options={[
+                  { value: "spam", label: t("navigation.spam") },
+                  { value: "trash", label: t("navigation.trash") },
+                  ...(folders.data?.folders ?? []).map((folder) => ({
+                    value: `folder:${folder.id}`,
+                    label: folder.name,
+                  })),
+                ]}
+              />
+            </div>
+          </div>
+          {save.isError && (
+            <p role="alert" className="text-sm text-red-600">{save.error.message}</p>
+          )}
+          <div className="flex justify-end gap-2 border-t border-neutral-200 pt-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setDialogOpen(false)}
+            >
+              {t("common.cancel")}
+            </Button>
+            <Button
+              type="submit"
+              disabled={
+                !mailboxId ||
+                !destination ||
+                !matchValue.trim() ||
+                save.isPending
+              }
+            >
+              {save.isPending
+                ? t("common.saving")
+                : editingRule
+                  ? t("rules.saveChanges")
+                  : t("rules.create")}
+            </Button>
+          </div>
+        </form>
       </Dialog>
     </section>
   );

@@ -30,9 +30,11 @@ export function getSetupRequirementChecks(env: CloudflareEnv): SetupRequirementC
 
 	return [
 		{
-			key: "Cloudflare API credentials",
-			configured: hasApiToken || hasGlobalKey,
-			message: "Set CF_TOKEN, or set both CF_API_KEY and CF_EMAIL.",
+			key: "Cloudflare API credentials (optional)",
+			configured: true,
+			message: hasApiToken || hasGlobalKey
+				? "Domains are provisioned on Cloudflare automatically."
+				: "Not set: Email Routing and DNS records must be configured by hand, as shown on the domain page. Set CF_TOKEN, or both CF_API_KEY and CF_EMAIL, to automate it.",
 		},
 		{
 			key: "D1 database",

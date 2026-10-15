@@ -8,7 +8,8 @@ import { useLanguage } from "@/components/language-provider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
-import { Label } from "@/components/ui/label";
+import { FormField } from "@/components/ui/form";
+import { PageHeader } from "@/components/shared/page-header";
 import type { ManagedAccount, ManagedDomain, ManagedMailbox } from "../types";
 import {
   addManagedMailbox,
@@ -81,12 +82,10 @@ export default function AccountMailboxesPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl md:text-3xl font-medium text-neutral-900">{t("account.mailboxes.title")}</h1>
-        <p className="mt-2 text-sm text-neutral-500">
-          {t("account.mailboxes.manage", { name: account?.name ?? t("account.password.thisAccount") })}
-        </p>
-      </div>
+      <PageHeader
+        title={t("account.mailboxes.title")}
+        description={t("account.mailboxes.manage", { name: account?.name ?? t("account.password.thisAccount") })}
+      />
       <section className="space-y-4 rounded-3xl bg-white p-6">
         <h2 className="text-base font-semibold text-neutral-900">{t("account.mailboxes.current")}</h2>
         <div className="space-y-2">
@@ -132,8 +131,7 @@ export default function AccountMailboxesPage() {
           </p>
           <form onSubmit={addMailbox} className="mt-4 space-y-4">
             <div className="grid gap-4 sm:grid-cols-2">
-              <div className="min-w-0 space-y-2">
-                <Label htmlFor="inbox-name">{t("account.mailboxes.inboxName")}</Label>
+              <FormField label={t("account.mailboxes.inboxName")} htmlFor="inbox-name" className="min-w-0">
                 <Input
                   id="inbox-name"
                   value={localPart}
@@ -143,26 +141,22 @@ export default function AccountMailboxesPage() {
                   maxLength={64}
                   required
                 />
-              </div>
-              <div className="min-w-0 space-y-2">
-                <Label htmlFor="inbox-domain">{t("account.mailboxes.domain")}</Label>
+              </FormField>
+              <FormField label={t("account.mailboxes.domain")} htmlFor="inbox-domain" className="min-w-0">
                 <Select
                   id="inbox-domain"
                   value={domainId}
-                  onChange={(event) => setDomainId(event.target.value)}
-                  containerClassName="h-10 w-full min-w-0 bg-white"
-                  className="min-w-0 text-sm"
+                  onValueChange={setDomainId}
+                  options={
+                    domains.length === 0
+                      ? [{ value: "", label: t("account.mailboxes.noDomains") }]
+                      : domains.map((domain) => ({ value: domain.id, label: domain.hostname }))
+                  }
+                  containerClassName="w-full min-w-0"
                   disabled={!account || domains.length === 0 || saving}
                   required
-                >
-                  {domains.length === 0 && <option value="">{t("account.mailboxes.noDomains")}</option>}
-                  {domains.map((domain) => (
-                    <option key={domain.id} value={domain.id}>
-                      {domain.hostname}
-                    </option>
-                  ))}
-                </Select>
-              </div>
+                />
+              </FormField>
             </div>
             {domainId && (
               <p className="break-all text-sm text-neutral-500">

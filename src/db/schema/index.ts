@@ -690,6 +690,8 @@ export const appSettings = sqliteTable("app_settings", {
 	resendApiKey: text("resend_api_key"),
 	/** JSON: AWS access key, secret and region (see src/lib/aws/config.ts). */
 	awsConfig: text("aws_config"),
+	/** JSON: the S3-compatible object storage chosen under Admin → Storage (see src/lib/storage/settings.ts); null keeps the default. */
+	storageConfig: text("storage_config"),
 	/** JSON: the shared SES inbound resources Mailflare created (bucket, topic, rule set, webhook token). */
 	sesReceiving: text("ses_receiving"),
 	resendWebhookId: text("resend_webhook_id"),

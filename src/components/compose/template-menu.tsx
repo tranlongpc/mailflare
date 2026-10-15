@@ -1,14 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { ChevronRight, FileText, Plus, Trash2 } from "lucide-react";
 import { useLanguage } from "@/components/language-provider";
+import { Button } from "@/components/ui/button";
+import { Popover } from "@/components/ui/popover";
 import { authFetch } from "@/lib/auth/client";
 import { textToHtml } from "./rich-text-utils";
 import type { ComposeTemplate, TemplateMenuProps } from "./template-types";
 
-const itemClass = "flex cursor-pointer items-center rounded-md px-3 py-2 outline-none hover:bg-neutral-100 focus:bg-neutral-100";
+const itemClass = "flex w-full cursor-pointer items-center rounded-md px-3 py-2 text-left outline-none hover:bg-neutral-100 focus:bg-neutral-100";
 
 export function TemplateMenu({ onApply, onNew }: TemplateMenuProps) {
 	const { t } = useLanguage();
@@ -27,43 +28,51 @@ export function TemplateMenu({ onApply, onNew }: TemplateMenuProps) {
 	}
 
 	return (
-		<DropdownMenu.Sub>
-				<DropdownMenu.SubTrigger className={`${itemClass} justify-between data-[state=open]:bg-neutral-100`}>
+		<Popover
+			side="right"
+			align="start"
+			offset={4}
+			ariaLabel={t("template.menu")}
+			className="flex max-h-80 w-64 flex-col rounded-lg p-1 shadow-lg"
+			trigger={
+				<Button type="button" variant="unstyled" className={`${itemClass} justify-between data-[state=open]:bg-neutral-100`}>
 					<span className="flex items-center"><FileText className="mr-2 h-4 w-4" />{t("template.menu")}</span>
 					<ChevronRight className="ml-4 h-4 w-4 text-neutral-400" />
-				</DropdownMenu.SubTrigger>
-				<DropdownMenu.Portal>
-					<DropdownMenu.SubContent
-						sideOffset={4}
-						className="z-50 flex max-h-80 w-64 flex-col rounded-lg border border-neutral-200 bg-white p-1 text-sm shadow-lg"
-					>
-						<div className="min-h-0 flex-1 overflow-y-auto">
-							{templates.length === 0 && <p className="px-3 py-2 text-xs text-neutral-500">{t("template.none")}</p>}
-							{templates.map((template) => (
-								<DropdownMenu.Item
-									key={template.id}
-									onSelect={() => onApply({ title: template.subject ?? "", html: template.htmlBody ?? textToHtml(template.textBody ?? "") })}
-									className={`${itemClass} group justify-between gap-2`}
+				</Button>
+			}
+		>
+			{({ close }) => (
+				<>
+					<div className="min-h-0 flex-1 overflow-y-auto">
+						{templates.length === 0 && <p className="px-3 py-2 text-xs text-neutral-500">{t("template.none")}</p>}
+						{templates.map((template) => (
+							<div key={template.id} className="group flex items-center justify-between gap-2 rounded-md hover:bg-neutral-100 focus-within:bg-neutral-100">
+								<Button
+									type="button"
+									variant="unstyled"
+									onClick={() => { close(); onApply({ title: template.subject ?? "", html: template.htmlBody ?? textToHtml(template.textBody ?? "") }); }}
+									className="min-w-0 flex-1 whitespace-normal break-words px-3 py-2 text-left outline-none"
 								>
-									<span className="whitespace-normal break-words">{template.subject || t("template.untitled")}</span>
-									<button
-										type="button"
-										aria-label={t("template.delete")}
-										onPointerDown={(event) => event.stopPropagation()}
-										onClick={(event) => { event.stopPropagation(); void remove(template.id); }}
-										className="shrink-0 rounded p-1 text-neutral-400 opacity-0 hover:text-red-600 group-hover:opacity-100 group-focus:opacity-100"
-									>
-										<Trash2 className="h-3.5 w-3.5" />
-									</button>
-								</DropdownMenu.Item>
-							))}
-						</div>
-						<DropdownMenu.Separator className="my-1 h-px bg-neutral-100" />
-						<DropdownMenu.Item onSelect={onNew} className={`${itemClass} text-blue-600`}>
-							<Plus className="mr-2 h-4 w-4" />{t("template.new")}
-						</DropdownMenu.Item>
-					</DropdownMenu.SubContent>
-				</DropdownMenu.Portal>
-		</DropdownMenu.Sub>
+									{template.subject || t("template.untitled")}
+								</Button>
+								<Button
+									type="button"
+									variant="unstyled"
+									aria-label={t("template.delete")}
+									onClick={() => void remove(template.id)}
+									className="mr-2 shrink-0 rounded p-1 text-neutral-400 opacity-0 hover:text-red-600 focus-visible:opacity-100 group-hover:opacity-100 group-focus-within:opacity-100"
+								>
+									<Trash2 className="h-3.5 w-3.5" />
+								</Button>
+							</div>
+						))}
+					</div>
+					<div className="my-1 h-px shrink-0 bg-neutral-100" />
+					<Button type="button" variant="unstyled" onClick={() => { close(); onNew(); }} className={`${itemClass} text-blue-600`}>
+						<Plus className="mr-2 h-4 w-4" />{t("template.new")}
+					</Button>
+				</>
+			)}
+		</Popover>
 	);
 }

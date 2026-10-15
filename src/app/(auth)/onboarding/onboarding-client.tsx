@@ -2,12 +2,14 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { AlertTriangle, ArrowRight, CheckCircle2, LoaderCircle, MailPlus } from "lucide-react";
+import { AlertTriangle, ArrowRight, CheckCircle2, MailPlus } from "lucide-react";
 import { useLanguage } from "@/components/language-provider";
 import { AuthShell } from "@/components/auth/auth-shell";
+import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Spinner } from "@/components/ui/spinner";
 import { Switch } from "@/components/ui/switch";
 import { checkDomain, createDomain, createMailbox, getDomains } from "./utils";
 import type { DomainPreflight } from "./types";
@@ -169,7 +171,7 @@ export function OnboardingClient() {
 								</p>
 							</div>
 							{domainChecking ? (
-								<LoaderCircle className="h-4 w-4 animate-spin text-neutral-500" />
+								<Spinner className="h-4 w-4 text-neutral-500" />
 							) : (
 								<Switch
 									id="onboarding-enable-sending"
@@ -196,7 +198,7 @@ export function OnboardingClient() {
 								<Button
 									onClick={() => void addDomain(true)}
 									disabled={loading}
-									className="h-11 w-full rounded-full px-6 active:scale-[0.98]"
+									size="pill"
 								>
 									{loading ? t("onboarding.replacingMx") : t("onboarding.deleteMxContinue")}
 								</Button>
@@ -206,7 +208,7 @@ export function OnboardingClient() {
 							<Button
 								onClick={() => void addDomain()}
 								disabled={!hostname || loading || domainChecking}
-								className="h-11 w-full rounded-full px-6 active:scale-[0.98]"
+								size="pill"
 							>
 								{loading ? t("onboarding.adding") : t("onboarding.addDomain")}
 							</Button>
@@ -230,17 +232,13 @@ export function OnboardingClient() {
 						<Button
 							onClick={addMailbox}
 							disabled={!localPart || loading}
-							className="h-11 w-full rounded-full px-6 active:scale-[0.98]"
+							size="pill"
 						>
 							{loading ? t("setup.creating") : t("onboarding.goToInbox")}
 						</Button>
 					</>
 				)}
-				{error && (
-					<p role="alert" className="rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
-						{error}
-					</p>
-				)}
+				{error && <Alert variant="destructive">{error}</Alert>}
 			</div>
 		</AuthShell>
 	);

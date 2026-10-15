@@ -2,14 +2,16 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { AlertTriangle, ArrowRight, CheckCircle2, LoaderCircle, MailPlus, XCircle } from "lucide-react";
+import { AlertTriangle, ArrowRight, CheckCircle2, MailPlus, XCircle } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useLanguage } from "@/components/language-provider";
 import { AuthShell } from "@/components/auth/auth-shell";
+import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Spinner } from "@/components/ui/spinner";
 import { Switch } from "@/components/ui/switch";
 import { TurnstileField } from "@/components/auth/turnstile";
 import {
@@ -214,7 +216,7 @@ export function RegisterClient() {
           </p>
           <Button
             type="button"
-            className="h-11 w-full rounded-full px-6 active:scale-[0.98]"
+            size="pill"
             onClick={() => router.push("/login")}
           >
             {t("setup.goToLogin")}
@@ -249,7 +251,7 @@ export function RegisterClient() {
           <div className="space-y-2">
             {loading && checks.length === 0 && (
               <div className="flex items-center gap-3 rounded-2xl bg-neutral-50 px-4 py-3 text-sm text-neutral-600">
-                <LoaderCircle className="h-4 w-4 animate-spin" />
+                <Spinner className="h-4 w-4" />
                 {t("setup.checking")}
               </div>
             )}
@@ -273,15 +275,11 @@ export function RegisterClient() {
               </div>
             )}
           </div>
-          {error && (
-            <p role="alert" className="rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
-              {error}
-            </p>
-          )}
+          {error && <Alert variant="destructive">{error}</Alert>}
           {preparationComplete ? (
             <Button
               type="button"
-              className="h-11 w-full rounded-full px-6 active:scale-[0.98]"
+              size="pill"
               onClick={() => setStep(hasPrimaryDomain ? 3 : 2)}
             >
               {t("common.continue")}
@@ -290,7 +288,7 @@ export function RegisterClient() {
             <Button
               type="button"
               variant="outline"
-              className="h-11 w-full rounded-full px-6 active:scale-[0.98]"
+              size="pill"
               disabled={loading}
               onClick={() => void runPreparation()}
             >
@@ -346,14 +344,10 @@ export function RegisterClient() {
               {t("setup.domainFound", { zone: domainCheck.zone.name })}
             </div>
           )}
-          {error && (
-            <p role="alert" className="rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
-              {error}
-            </p>
-          )}
+          {error && <Alert variant="destructive">{error}</Alert>}
           <Button
             type="submit"
-            className="h-11 w-full rounded-full px-6 active:scale-[0.98]"
+            size="pill"
             disabled={loading || domainChecking}
           >
             {loading ? t("setup.addingDomain") : t("common.continue")}
@@ -363,7 +357,7 @@ export function RegisterClient() {
         <form method="post" onSubmit={onSubmit} className="space-y-5">
 					{mxChecking && (
 						<div className="flex items-center gap-3 rounded-2xl bg-neutral-50 px-4 py-3 text-sm text-neutral-600">
-							<LoaderCircle className="h-4 w-4 animate-spin" />
+							<Spinner className="h-4 w-4" />
 							{t("setup.checkingMx")}
 						</div>
 					)}
@@ -374,22 +368,23 @@ export function RegisterClient() {
 						</div>
 					)}
 					{mxRecordsExist === true && (
-						<label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 text-amber-900">
-							<Checkbox
-								checked={replaceMxRecords}
-								onChange={(event) => setReplaceMxRecords(event.target.checked)}
-								className="mt-1"
-							/>
-							<span>
+						<Checkbox
+							checked={replaceMxRecords}
+							onChange={(event) => setReplaceMxRecords(event.target.checked)}
+							className="mt-1"
+							labelClassName="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 text-amber-900"
+							label={
 								<span className="flex items-center gap-2 text-sm font-medium">
 									<AlertTriangle className="h-4 w-4" />
 									{t("setup.replaceMx")}
 								</span>
-								<span className="mt-1 block text-xs leading-5">
+							}
+							description={
+								<span className="block text-xs leading-5 text-amber-900">
 									{t("setup.replaceMxHint")}
 								</span>
-							</span>
-						</label>
+							}
+						/>
 					)}
           <div className="space-y-2">
             <Label htmlFor="username">{t("setup.username")}</Label>
@@ -432,16 +427,12 @@ export function RegisterClient() {
             {/* <p className="text-xs leading-5 text-neutral-500">Used later for password reset.</p> */}
           </div>
 
-          {error && (
-            <p role="alert" className="rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
-              {error}
-            </p>
-          )}
+          {error && <Alert variant="destructive">{error}</Alert>}
 					{!mxChecking && mxRecordsExist === null && (
 						<Button
 							type="button"
 							variant="outline"
-							className="h-11 w-full rounded-full px-6 active:scale-[0.98]"
+							size="pill"
 							onClick={() => setMxCheckRevision((value) => value + 1)}
 						>
 							{t("setup.checkMxAgain")}
@@ -450,7 +441,8 @@ export function RegisterClient() {
           <TurnstileField resetSignal={turnstileReset} />
 					<Button
 						type="submit"
-						className="h-11 w-full rounded-full px-6 active:scale-[0.98] mt-8"
+						size="pill"
+						className="mt-8"
 						disabled={loading || mxChecking || mxRecordsExist === null || (mxRecordsExist && !replaceMxRecords) || hasAdminAccount === null || hasPrimaryDomain === null}
 					>
 						{loading ? t("setup.creating") : t("setup.createAccount")}

@@ -8,7 +8,7 @@ import { useSelectedMailbox } from "@/components/mailbox-provider";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { FormField } from "@/components/ui/form";
 import { createJmapApiKey } from "./utils";
 
 /** Upper bound `POST /api/api-keys` places on `mailboxIds`. */
@@ -70,10 +70,9 @@ export function EmailClientsSettings() {
 			) : (
 				<form onSubmit={submit} className="space-y-4">
 					<div className="flex flex-wrap items-end gap-3">
-						<div className="min-w-56 flex-1 space-y-2">
-							<Label htmlFor="jmap-key-name">{t("emailClients.deviceName")}</Label>
+						<FormField label={t("emailClients.deviceName")} htmlFor="jmap-key-name" className="min-w-56 flex-1">
 							<Input id="jmap-key-name" value={name} onChange={(event) => setName(event.target.value)} placeholder={t("emailClients.devicePlaceholder")} />
-						</div>
+						</FormField>
 						<Button type="submit" disabled={busy || isLoading || !mailboxIds.length || mailboxIds.length > MAX_KEY_MAILBOXES}>
 							<KeyRound className="h-4 w-4" />
 							{busy ? t("emailClients.creating") : t("emailClients.create")}
@@ -87,13 +86,13 @@ export function EmailClientsSettings() {
 							<p className="text-sm text-neutral-500">{t("apiKeys.noMailboxes")}</p>
 						) : (
 							mailboxes.map((mailbox) => (
-								<label key={mailbox.id} className="flex items-center gap-3 text-sm">
-									<Checkbox
-										checked={mailboxIds.includes(mailbox.id)}
-										onChange={(event) => setChosenMailboxIds(event.target.checked ? [...mailboxIds, mailbox.id] : mailboxIds.filter((id) => id !== mailbox.id))}
-									/>
-									{mailbox.localPart}@{mailbox.hostname}
-								</label>
+								<Checkbox
+									key={mailbox.id}
+									labelClassName="[&_span]:font-normal"
+									label={`${mailbox.localPart}@${mailbox.hostname}`}
+									checked={mailboxIds.includes(mailbox.id)}
+									onChange={(event) => setChosenMailboxIds(event.target.checked ? [...mailboxIds, mailbox.id] : mailboxIds.filter((id) => id !== mailbox.id))}
+								/>
 							))
 						)}
 						<p className="text-xs text-neutral-500">{t("emailClients.aliasLimit", { max: MAX_KEY_MAILBOXES })}</p>

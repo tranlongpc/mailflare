@@ -114,35 +114,36 @@ test("every registered catalog has the English keys and nonempty messages and la
 });
 
 test("missing, invalid and unsupported locale values fall back to English", () => {
-	for (const value of [undefined, null, "", "not-a-registered-locale", "pt-BR; Path=/", {}]) assert.equal(i18n.resolveLocale(value), "en");
+	for (const value of [undefined, null, "", "not-a-registered-locale", "de; Path=/", {}]) assert.equal(i18n.resolveLocale(value), "en");
 	assert.equal(i18n.resolveLocale("en"), "en");
-	assert.equal(i18n.resolveLocale("pt-BR"), "pt-BR");
+	assert.equal(i18n.resolveLocale("de"), "de");
 });
 
 test("translation uses the requested catalog and falls back per key", async () => {
-	assert.equal(i18n.translate(await i18n.loadMessages("pt-BR"), "navigation.inbox"), "Entrada");
+	assert.equal(i18n.translate(await i18n.loadMessages("de"), "navigation.inbox"), "Posteingang");
 	assert.equal(i18n.translate({}, "navigation.inbox"), "Inbox");
 });
 
 test("preference cookie persists for a year, covers every path and is Secure on HTTPS", () => {
-	assert.equal(i18n.serializeLocaleCookie("pt-BR", true), "mailflare-locale=pt-BR; Path=/; Max-Age=31536000; SameSite=Lax; Secure");
+	assert.equal(i18n.serializeLocaleCookie("de", true), "mailflare-locale=de; Path=/; Max-Age=31536000; SameSite=Lax; Secure");
 	assert.equal(i18n.serializeLocaleCookie("en", false), "mailflare-locale=en; Path=/; Max-Age=31536000; SameSite=Lax");
 	assert.equal(i18n.serializeLocaleCookie("bad; Domain=example.com", true), "mailflare-locale=en; Path=/; Max-Age=31536000; SameSite=Lax; Secure");
 });
 
-test("provider server rendering uses initial locale and labels the native language selector", async () => {
-	const pt = await i18n.renderLanguage("pt-BR");
-	assert.match(pt, /<span>Entrada<\/span>/);
-	assert.match(pt, /<label for="[^"]+"[^>]*>Idioma<\/label>/);
-	assert.match(pt, /<select id="[^"]+"/);
-	assert.match(pt, /value="pt-BR" lang="pt-BR" selected=""/);
-	assert.match(await i18n.renderLanguage("en"), /value="en" lang="en" selected=""/);
+test("provider server rendering uses initial locale and labels the language selector", async () => {
+	const pt = await i18n.renderLanguage("de");
+	assert.match(pt, /<span>Posteingang<\/span>/);
+	const labelFor = pt.match(/<label[^>]*\sfor="([^"]+)"[^>]*>Sprache<\/label>/)?.[1];
+	assert.ok(labelFor, "the selector has a visible label");
+	assert.match(pt, new RegExp(`<button id="${labelFor}"[^>]*role="combobox"`));
+	assert.match(pt, /lang="de">Deutsch<\/span>/);
+	assert.match(await i18n.renderLanguage("en"), /lang="en">English<\/span>/);
 });
 
 test("root layout passes the same cookie locale to HTML and provider on first render", async () => {
-	const pt = await i18n.renderLayout("pt-BR");
-	assert.match(pt, /<html lang="pt-BR"/);
-	assert.match(pt, /<span>Entrada<\/span>/);
+	const pt = await i18n.renderLayout("de");
+	assert.match(pt, /<html lang="de"/);
+	assert.match(pt, /<span>Posteingang<\/span>/);
 	for (const value of [undefined, "bad"]) {
 		const english = await i18n.renderLayout(value);
 		assert.match(english, /<html lang="en"/);
@@ -160,7 +161,7 @@ test("a locale registered once reaches resolution, translation, cookie, selector
 	assert.equal(extended.translate(await extended.loadMessages("xx"), "navigation.inbox"), "Entrada");
 	assert.match(extended.serializeLocaleCookie("xx", true), /^mailflare-locale=xx;/);
 	const selector = await extended.renderLanguage("xx");
-	assert.match(selector, /value="xx" lang="xx" selected="">Testlandic<\/option>/);
+	assert.match(selector, /lang="xx">Testlandic<\/span>/);
 	assert.match(selector, />Entrada<\/span>/);
 	const layout = await extended.renderLayout("xx");
 	assert.match(layout, /<html lang="xx"/);
@@ -178,6 +179,6 @@ test("a locale registered once reaches resolution, translation, cookie, selector
 test("translations interpolate {vars}, keep unknown placeholders and default to ltr", async () => {
 	assert.equal(i18n.translate({ "navigation.inbox": "Hi {name}, {other}" }, "navigation.inbox", { name: "Ana", count: 2 }), "Hi Ana, {other}");
 	assert.equal(i18n.translate({}, "navigation.inbox", { name: "x" }), "Inbox");
-	assert.equal(i18n.createTranslator("pt-BR", await i18n.loadMessages("pt-BR"))("navigation.inbox", { count: 2 }), "Entrada");
+	assert.equal(i18n.createTranslator("de", await i18n.loadMessages("de"))("navigation.inbox", { count: 2 }), "Posteingang");
 	assert.equal(i18n.getDirection("en"), "ltr");
 });

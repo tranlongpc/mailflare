@@ -5,18 +5,14 @@ import { AtSign, Save, Trash2, UserPlus } from "lucide-react";
 import { useParams, usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useLanguage } from "@/components/language-provider";
+import { PageHeader } from "@/components/shared/page-header";
+import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Label } from "@/components/ui/label";
+import { FormField } from "@/components/ui/form";
 import { Select } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -119,42 +115,38 @@ export default function MailboxSettingsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-start justify-between gap-4">
-        <div className="min-w-0">
-          <h1 className="truncate text-2xl md:text-3xl font-medium text-neutral-900">
-            {t("mailbox.title")}
-          </h1>
-          {address ? (
-            <p className="mt-1 truncate no-font-mono text-sm text-neutral-500">
-              {address}
-            </p>
-          ) : (
-            <Skeleton className="mt-2 h-4 w-52" />
-          )}
-        </div>
-        <div className="flex shrink-0 items-center gap-2">
-          {mailbox.data?.type === "shared" && (
-            <Badge variant="secondary">{t("mailboxes.shared")}</Badge>
-          )}
-          {mailbox.data?.isPrimary && (
-            <Badge variant="secondary">{t("mailbox.primary")}</Badge>
-          )}
-        </div>
-      </div>
+      <PageHeader
+        className="flex-nowrap"
+        title={t("mailbox.title")}
+        actions={
+          <>
+            {mailbox.data?.type === "shared" && (
+              <Badge variant="secondary">{t("mailboxes.shared")}</Badge>
+            )}
+            {mailbox.data?.isPrimary && (
+              <Badge variant="secondary">{t("mailbox.primary")}</Badge>
+            )}
+          </>
+        }
+      >
+        {address ? (
+          <p className="mt-1 truncate no-font-mono text-sm text-neutral-500">
+            {address}
+          </p>
+        ) : (
+          <Skeleton className="mt-2 h-4 w-52" />
+        )}
+      </PageHeader>
 
       {mailbox.isError && (
-        <p className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <Alert variant="destructive" className="rounded-lg border-red-200">
           {mailbox.error instanceof Error
             ? mailbox.error.message
             : t("mailbox.loadFailed")}
-        </p>
+        </Alert>
       )}
 
-      <Card className="rounded-3xl border-0 bg-white p-6">
-        <CardHeader className="py-0">
-          <CardTitle>{t("mailbox.account")}</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4 pt-5">
+      <Card title={t("mailbox.account")} contentClassName="space-y-4">
           {mailbox.data ? (
             <MailboxAvatarForm
               mailboxId={mailbox.data.id}
@@ -165,8 +157,7 @@ export default function MailboxSettingsPage() {
             <Skeleton className="h-24 w-24 rounded-full" />
           )}
 
-          <div className="space-y-2">
-            <Label htmlFor="displayName">{t("common.name")}</Label>
+          <FormField label={t("common.name")} htmlFor="displayName">
             <Input
               id="displayName"
               value={displayName}
@@ -174,20 +165,15 @@ export default function MailboxSettingsPage() {
               placeholder={mailbox.data?.localPart ?? t("mailboxes.namePlaceholder")}
               disabled={mailbox.isLoading || updateName.isPending}
             />
-          </div>
-          <label className="flex items-start gap-3 rounded-xl bg-neutral-50 p-4">
-            <Checkbox
-              checked={useAllDomains}
-              onChange={(event) => setUseAllDomains(event.target.checked)}
-              disabled={mailbox.isLoading || updateName.isPending}
-            />
-            <span>
-              <span className="block text-sm font-medium text-neutral-900">{t("aliases.useAll")}</span>
-              <span className="mt-1 block text-sm text-neutral-500">
-                {t("mailbox.useAllHint")}
-              </span>
-            </span>
-          </label>
+          </FormField>
+          <Checkbox
+            checked={useAllDomains}
+            onChange={(event) => setUseAllDomains(event.target.checked)}
+            disabled={mailbox.isLoading || updateName.isPending}
+            label={t("aliases.useAll")}
+            description={t("mailbox.useAllHint")}
+            labelClassName="rounded-xl bg-neutral-50 p-4"
+          />
           {updateName.isError && (
             <p className="text-sm text-red-600">
               {updateName.error instanceof Error
@@ -205,17 +191,13 @@ export default function MailboxSettingsPage() {
             <Save className="h-4 w-4" />
             {updateName.isPending ? t("common.saving") : t("settings.mailbox.saveChanges")}
           </Button>
-        </CardContent>
       </Card>
 
-      <Card className="rounded-3xl border-0 bg-white p-6">
-        <CardHeader className="py-0">
-          <CardTitle>{t("mailbox.aliases")}</CardTitle>
-          <CardDescription>
-            {t("mailbox.aliasesDescription")}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4 pt-5">
+      <Card
+        title={t("mailbox.aliases")}
+        description={t("mailbox.aliasesDescription")}
+        contentClassName="space-y-4"
+      >
           {aliases.isLoading && <Skeleton className="h-12 w-full rounded-2xl" />}
           {(aliases.data?.aliases ?? []).map((alias) => (
             <div
@@ -262,16 +244,15 @@ export default function MailboxSettingsPage() {
             />
             <Select
               value={aliasDomainId}
-              onChange={(event) => setAliasDomainId(event.target.value)}
-              className="h-10 min-w-0 flex-1 text-sm"
+              onValueChange={setAliasDomainId}
+              containerClassName="min-w-0 flex-1"
+              className="text-sm"
               disabled={addAlias.isPending}
-            >
-              {(aliases.data?.availableDomains ?? []).map((domain) => (
-                <option key={domain.id} value={domain.id}>
-                  @{domain.hostname}
-                </option>
-              ))}
-            </Select>
+              options={(aliases.data?.availableDomains ?? []).map((domain) => ({
+                value: domain.id,
+                label: `@${domain.hostname}`,
+              }))}
+            />
             <Button
               type="button"
               disabled={!aliasLocalPart.trim() || !aliasDomainId || addAlias.isPending}
@@ -293,18 +274,14 @@ export default function MailboxSettingsPage() {
                 : t("mailbox.aliasRemoveFailed")}
             </p>
           )}
-        </CardContent>
       </Card>
 
       {mailbox.data?.type === "shared" && (
-        <Card className="rounded-3xl border-0 bg-white p-6">
-          <CardHeader className="py-0">
-            <CardTitle>{t("mailbox.sharedAccess")}</CardTitle>
-            <CardDescription>
-              {t("mailbox.sharedAccessDescription")}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4 pt-5">
+        <Card
+          title={t("mailbox.sharedAccess")}
+          description={t("mailbox.sharedAccessDescription")}
+          contentClassName="space-y-4"
+        >
             {sharedAccess.isLoading && <Skeleton className="h-16 w-full rounded-2xl" />}
             {(sharedAccess.data?.members ?? []).map((member) => (
               <div
@@ -344,21 +321,20 @@ export default function MailboxSettingsPage() {
             <div className="flex gap-2">
               <Select
                 value={selectedUserId}
-                onChange={(event) => setSelectedUserId(event.target.value)}
-                className="h-10 min-w-0 flex-1 text-sm"
-              >
-                <option value="">{t("mailbox.chooseAccount")}</option>
-                {(sharedAccess.data?.availableUsers ?? [])
+                onValueChange={setSelectedUserId}
+                containerClassName="min-w-0 flex-1"
+                className="text-sm"
+                placeholder={t("mailbox.chooseAccount")}
+                options={(sharedAccess.data?.availableUsers ?? [])
                   .filter(
                     (account) =>
                       !sharedAccess.data?.members.some((member) => member.userId === account.id),
                   )
-                  .map((account) => (
-                    <option key={account.id} value={account.id}>
-                      {account.name} ({account.email})
-                    </option>
-                  ))}
-              </Select>
+                  .map((account) => ({
+                    value: account.id,
+                    label: `${account.name} (${account.email})`,
+                  }))}
+              />
               <Button
                 type="button"
                 disabled={!selectedUserId || addMember.isPending}
@@ -373,23 +349,18 @@ export default function MailboxSettingsPage() {
                 {addMember.error instanceof Error ? addMember.error.message : t("mailbox.accountAddFailed")}
               </p>
             )}
-          </CardContent>
         </Card>
       )}
-      <Card className="rounded-3xl border-0 bg-white p-6">
-        <CardHeader className="py-0">
-          <CardTitle className="text-red-700">{t("mailbox.dangerZone")}</CardTitle>
-          <CardDescription>
-            {t("mailbox.dangerDescription", { address: address || t("mailbox.thisAddress") })}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="pt-5">
+      <Card
+        title={<span className="text-red-700">{t("mailbox.dangerZone")}</span>}
+        description={t("mailbox.dangerDescription", { address: address || t("mailbox.thisAddress") })}
+      >
           {removeMailbox.isError && (
-            <p className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            <Alert variant="destructive" className="mb-4 rounded-lg border-red-200">
               {removeMailbox.error instanceof Error
                 ? removeMailbox.error.message
                 : t("mailbox.deleteFailed")}
-            </p>
+            </Alert>
           )}
           <Button
             type="button"
@@ -408,7 +379,6 @@ export default function MailboxSettingsPage() {
             <Trash2 className="h-4 w-4" />
             {removeMailbox.isPending ? t("mailbox.deleting") : t("mailbox.delete")}
           </Button>
-        </CardContent>
       </Card>
 
 {/* 
