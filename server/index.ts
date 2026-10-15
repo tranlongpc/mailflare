@@ -1,3 +1,4 @@
+import "./load-env";
 import { createServer } from "node:http";
 import { join, resolve } from "node:path";
 import { parse } from "node:url";
