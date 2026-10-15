@@ -23,7 +23,10 @@ export type AuditAction =
 	| "email.read"
 	| "email.delete"
 	| "permission.change"
-	| "mailbox.access";
+	| "mailbox.access"
+	| "email.supervisor_view"
+	| "mailbox.supervisor_grant"
+	| "mailbox.supervisor_revoke";
 
 export type AuditLogInput = {
 	actorUserId?: string | null;

@@ -2032,5 +2032,13 @@
 	"storage.bunnyZone": "Storage zone",
 	"storage.bunnyPassword": "Mật khẩu storage zone",
 	"storage.bunnyPasswordHint": "Trong mục FTP & API Access của storage zone. Không phải API key của tài khoản.",
-	"storage.bunnyNote": "Bunny Storage không có URL upload ký sẵn, nên tệp Drive được tải lên qua ứng dụng. Tệp Drive lớn được lưu theo từng phần rồi ghép lại trong storage khi tải xong, việc này mất một lúc."
+	"storage.bunnyNote": "Bunny Storage không có URL upload ký sẵn, nên tệp Drive được tải lên qua ứng dụng. Tệp Drive lớn được lưu theo từng phần rồi ghép lại trong storage khi tải xong, việc này mất một lúc.",
+	"account.supervisedInbox": "Chuyển tiếp (chỉ xem)",
+	"account.supervision.title": "Chuyển tiếp",
+	"account.supervision.description": "Account được thêm ở đây nhận được bản chỉ xem của mailbox này, gồm cả thư đã gửi và spam, nhưng không thay đổi được gì. Chủ mailbox không được thông báo và trạng thái đã đọc của họ không đổi. Chỉ admin chính thấy danh sách này; mỗi thư được mở theo cách này đều được ghi vào audit log.",
+	"account.supervision.none": "Chưa chuyển tiếp cho ai",
+	"account.supervision.choose": "Chọn account",
+	"account.supervision.add": "Thêm",
+	"account.supervision.remove": "Gỡ {name}",
+	"account.supervision.failed": "Không cập nhật được chuyển tiếp"
 }

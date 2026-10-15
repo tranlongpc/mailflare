@@ -2047,5 +2047,13 @@
 	"storage.bunnyZone": "Storage Zone",
 	"storage.bunnyPassword": "Storage-Zone-Passwort",
 	"storage.bunnyPasswordHint": "Unter FTP & API Access der Storage Zone. Nicht der API-Schlüssel des Kontos.",
-	"storage.bunnyNote": "Bunny Storage hat keine signierten Upload-URLs, daher laufen Drive-Uploads über die App. Große Drive-Dateien werden in Teilen gespeichert und nach dem Upload im Speicher zusammengesetzt, was einen Moment dauert."
+	"storage.bunnyNote": "Bunny Storage hat keine signierten Upload-URLs, daher laufen Drive-Uploads über die App. Große Drive-Dateien werden in Teilen gespeichert und nach dem Upload im Speicher zusammengesetzt, was einen Moment dauert.",
+	"account.supervisedInbox": "Weitergeleitet (nur Lesen)",
+	"account.supervision.title": "Weiterleitung",
+	"account.supervision.description": "Hier hinzugefügte Konten erhalten eine schreibgeschützte Kopie dieses Postfachs, auch Gesendetes und Spam, können aber nichts ändern. Der Inhaber wird nicht informiert, sein Gelesen-Status bleibt unverändert. Nur der primäre Admin sieht diese Liste; jede so geöffnete Nachricht wird im Audit-Log erfasst.",
+	"account.supervision.none": "An niemanden weitergeleitet",
+	"account.supervision.choose": "Konto wählen",
+	"account.supervision.add": "Hinzufügen",
+	"account.supervision.remove": "{name} entfernen",
+	"account.supervision.failed": "Weiterleitung konnte nicht aktualisiert werden"
 }

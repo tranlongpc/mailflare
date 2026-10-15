@@ -51,3 +51,12 @@ export type AccountMailboxAccessResponse = {
 	mailboxes: AccountMailboxAccessItem[];
 	error?: string;
 };
+
+/** Another account with read-only, owner-invisible access to one of this account's mailboxes. */
+export type MailboxSupervisor = { mailboxId: string; userId: string; name: string; email: string };
+
+export type MailboxSupervisionResponse = {
+	supervisors: MailboxSupervisor[];
+	candidates: { id: string; name: string; email: string }[];
+	error?: string;
+};

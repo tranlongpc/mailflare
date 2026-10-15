@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { CalendarDays, Check, HardDrive, ChevronDown, Inbox, LogOut, Settings, ShieldCheck, UserPlus, UsersRound } from "lucide-react";
+import { CalendarDays, Check, Eye, HardDrive, ChevronDown, Inbox, LogOut, Settings, ShieldCheck, UserPlus, UsersRound } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useLanguage } from "@/components/language-provider";
 import { useSelectedMailbox } from "@/components/mailbox-provider";
@@ -103,6 +103,13 @@ function MailboxAccountRow({ mailbox, unread, avatarUrl, onSelect }: MailboxAcco
 						<Tooltip label={t("account.sharedInbox")}>
 							<span title={t("account.sharedInbox")} aria-label={t("account.sharedInbox")} className="shrink-0 text-blue-600">
 								<UsersRound className="h-3.5 w-3.5" />
+							</span>
+						</Tooltip>
+					)}
+					{mailbox.supervised && (
+						<Tooltip label={t("account.supervisedInbox")}>
+							<span title={t("account.supervisedInbox")} aria-label={t("account.supervisedInbox")} className="shrink-0 text-amber-600">
+								<Eye className="h-3.5 w-3.5" />
 							</span>
 						</Tooltip>
 					)}
@@ -282,6 +289,13 @@ export function MailboxSelector({ initialUser }: MailboxSelectorProps = {}) {
 								<Tooltip label={t("account.sharedInbox")}>
 									<span title={t("account.sharedInbox")} aria-label={t("account.sharedInbox")} className="shrink-0 text-blue-600">
 										<UsersRound className="h-4 w-4" />
+									</span>
+								</Tooltip>
+							)}
+							{selectedMailbox?.supervised && (
+								<Tooltip label={t("account.supervisedInbox")}>
+									<span title={t("account.supervisedInbox")} aria-label={t("account.supervisedInbox")} className="shrink-0 text-amber-600">
+										<Eye className="h-4 w-4" />
 									</span>
 								</Tooltip>
 							)}

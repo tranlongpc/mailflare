@@ -71,20 +71,27 @@ export async function POST(request: Request) {
 
 	const selectedMessages = await db.select().from(messages).where(inArray(messages.id, messageIds));
 	const allowedMessageIds: string[] = [];
-	let supervisedOnly = false;
+	const supervisedViews: { messageId: string; mailboxId: string }[] = [];
+	let supervisedSkipped = false;
 
 	for (const message of selectedMessages) {
 		if (!message.mailboxId) continue;
 		const access = await getMailboxAccessLevel(db, user, message.mailboxId);
 		const readState = payload.action === "read" || payload.action === "unread";
-		// Opening mail in a supervised mailbox marks it read; that must not reach the owner, so it is accepted and dropped.
-		if (readState && access?.supervised) { supervisedOnly = true; continue; }
+		// Opening mail in a supervised mailbox marks it read; that must not reach the owner, so the change is dropped
+		// and only the view is recorded for the primary admin.
+		if (readState && access?.supervised) {
+			supervisedSkipped = true;
+			if (payload.action === "read") supervisedViews.push({ messageId: message.id, mailboxId: message.mailboxId });
+			continue;
+		}
 		const canUpdate = readState ? access?.canRead : access?.canManage;
 		if (!canUpdate) continue;
 		allowedMessageIds.push(message.id);
 	}
 
-	if (allowedMessageIds.length === 0 && supervisedOnly) return NextResponse.json({ ok: true });
+	await Promise.all(supervisedViews.map((view) => createAuditLog(env, { actorUserId: user.id, ...view, action: "email.supervisor_view" })));
+	if (allowedMessageIds.length === 0 && supervisedSkipped) return NextResponse.json({ ok: true });
 	if (allowedMessageIds.length === 0) {
 		return NextResponse.json({ error: "No accessible messages" }, { status: 404 });
 	}

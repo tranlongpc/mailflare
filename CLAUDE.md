@@ -127,6 +127,8 @@ Two independent auth surfaces:
 
 Mailbox authorization is separate from user role and goes through `src/lib/mailboxes/access.ts` (`getMailboxAccessLevel`, `listAccessibleMailboxes`, `listAccessibleMailboxIds`), which accounts for ownership, the `mailbox_access` sharing table, and admin role. Message queries scope by accessible mailbox IDs, not by `userId` — see `src/app/api/messages/route.ts` for the canonical pattern.
 
+`mailbox_supervisors` is a separate, hidden read-only grant: the primary admin can let one account supervise another account's mailbox (any type, no license) from Admin → Accounts → Mailboxes (`/api/admin/mailbox-supervisors`). `getMailboxAccessLevel` returns `read_only` with `supervised: true` for it, and `listAccessibleMailboxes` adds those mailboxes (badged with an eye in the selector). Supervision is invisible to the owner: it never appears in `mailbox_access` or the sharing UI, and a supervisor's actions must not change what the owner sees — marking read is a no-op, starring is 403, and agent `mark_email_read` is refused. Opening a supervised message still writes an `email.supervisor_view` audit row (admin-only), as grant/revoke write `mailbox.supervisor_grant`/`_revoke`.
+
 ### Folders are mostly virtual
 
 `messages.status` is a free-text column driving the folder views: `received` (inbox), `sent`, `draft`, `spam`, `trash`, `archived`. Orthogonal to that are `starred`, `snoozedUntil`, and `folderId` (user-created folders in the `folders` table). A "folder" route under `src/app/(dashboard)/` is usually a status filter, not a table.

@@ -2047,5 +2047,13 @@
 	"storage.bunnyZone": "Storage zone",
 	"storage.bunnyPassword": "Storage zone password",
 	"storage.bunnyPasswordHint": "Under the storage zone's FTP & API Access. Not the account API key.",
-	"storage.bunnyNote": "Bunny Storage has no signed upload URLs, so Drive files upload through the app. Large Drive files are stored in parts and joined in storage when the upload finishes, which takes a moment."
+	"storage.bunnyNote": "Bunny Storage has no signed upload URLs, so Drive files upload through the app. Large Drive files are stored in parts and joined in storage when the upload finishes, which takes a moment.",
+	"account.supervisedInbox": "Forwarded (view only)",
+	"account.supervision.title": "Forwarding",
+	"account.supervision.description": "Accounts added here receive a read-only copy of this mailbox, including sent mail and spam, but cannot change it. The owner is not told, and their read state does not change. Only the primary admin sees this list; every message opened this way is recorded in the audit log.",
+	"account.supervision.none": "Not forwarded to anyone",
+	"account.supervision.choose": "Choose an account",
+	"account.supervision.add": "Add",
+	"account.supervision.remove": "Remove {name}",
+	"account.supervision.failed": "Could not update forwarding"
 }

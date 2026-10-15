@@ -3,20 +3,22 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { Plus, Trash2 } from "lucide-react";
+import { Eye, Plus, Trash2, X } from "lucide-react";
 import { useLanguage } from "@/components/language-provider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { FormField } from "@/components/ui/form";
 import { PageHeader } from "@/components/shared/page-header";
-import type { ManagedAccount, ManagedDomain, ManagedMailbox } from "../types";
+import type { ManagedAccount, ManagedDomain, ManagedMailbox, MailboxSupervisionResponse } from "../types";
 import {
   addManagedMailbox,
+  fetchMailboxSupervision,
   fetchManagedAccount,
   fetchManagedDomains,
   fetchManagedMailboxes,
   removeManagedMailbox,
+  setMailboxSupervisor,
 } from "../utils";
 
 export default function AccountMailboxesPage() {
@@ -29,6 +31,24 @@ export default function AccountMailboxesPage() {
   const [domainId, setDomainId] = useState("");
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  // Null when the signed-in admin is not the primary admin (the API refuses), which hides the section.
+  const [supervision, setSupervision] = useState<MailboxSupervisionResponse | null>(null);
+  const [supervisorChoice, setSupervisorChoice] = useState<Record<string, string>>({});
+
+  async function loadSupervision() {
+    setSupervision(await fetchMailboxSupervision(id).catch(() => null));
+  }
+
+  async function changeSupervisor(mailboxId: string, userId: string, enabled: boolean) {
+    setMessage(null);
+    try {
+      await setMailboxSupervisor(mailboxId, userId, enabled);
+      if (enabled) setSupervisorChoice((current) => ({ ...current, [mailboxId]: "" }));
+      await loadSupervision();
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : t("account.supervision.failed"));
+    }
+  }
 
   async function load() {
     const [nextAccount, nextMailboxes, nextDomains] = await Promise.all([
@@ -40,6 +60,7 @@ export default function AccountMailboxesPage() {
     setMailboxes(nextMailboxes);
     setDomains(nextDomains);
     setDomainId((current) => current || nextDomains[0]?.id || "");
+    await loadSupervision();
   }
 
   useEffect(() => {
@@ -124,6 +145,49 @@ export default function AccountMailboxesPage() {
             <p className="text-sm text-neutral-500">{t("account.mailboxes.none")}</p>
           )}
         </div>
+        {supervision && mailboxes.length > 0 && (
+          <div className="space-y-4 border-t border-neutral-200 pt-6">
+            <div>
+              <h2 className="flex items-center gap-2 text-base font-semibold text-neutral-900"><Eye className="h-4 w-4" />{t("account.supervision.title")}</h2>
+              <p className="mt-1 text-sm text-neutral-500">{t("account.supervision.description")}</p>
+            </div>
+            {mailboxes.map((mailbox) => {
+              const current = supervision.supervisors.filter((item) => item.mailboxId === mailbox.id);
+              const options = supervision.candidates.filter((candidate) => !current.some((item) => item.userId === candidate.id));
+              const choice = supervisorChoice[mailbox.id] ?? "";
+              return (
+                <div key={mailbox.id} className="space-y-3 rounded-2xl bg-neutral-50 px-4 py-3">
+                  <p className="truncate text-sm font-medium text-neutral-900">{mailbox.localPart}@{mailbox.hostname}</p>
+                  <div className="flex flex-wrap gap-2">
+                    {current.length === 0 && <span className="text-sm text-neutral-500">{t("account.supervision.none")}</span>}
+                    {current.map((item) => (
+                      <span key={item.userId} className="inline-flex max-w-full items-center gap-1 rounded-full bg-white px-3 py-1 text-sm text-neutral-800">
+                        <span className="truncate">{item.name} ({item.email})</span>
+                        <button type="button" className="shrink-0 cursor-pointer rounded-full p-0.5 text-neutral-500 hover:text-red-600" aria-label={t("account.supervision.remove", { name: item.name })} onClick={() => void changeSupervisor(mailbox.id, item.userId, false)}>
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                  <div className="flex gap-2">
+                    <Select
+                      value={choice}
+                      onValueChange={(value) => setSupervisorChoice((state) => ({ ...state, [mailbox.id]: value }))}
+                      containerClassName="min-w-0 flex-1"
+                      className="text-sm"
+                      placeholder={t("account.supervision.choose")}
+                      options={options.map((candidate) => ({ value: candidate.id, label: `${candidate.name} (${candidate.email})` }))}
+                    />
+                    <Button type="button" variant="outline" disabled={!choice} onClick={() => void changeSupervisor(mailbox.id, choice, true)}>
+                      <Plus className="h-4 w-4" />
+                      {t("account.supervision.add")}
+                    </Button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
         <div className="border-t border-neutral-200 pt-6">
           <h2 className="text-base font-semibold text-neutral-900">{t("account.mailboxes.addTitle")}</h2>
           <p className="mt-1 text-sm text-neutral-500">

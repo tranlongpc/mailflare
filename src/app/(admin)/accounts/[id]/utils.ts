@@ -10,6 +10,7 @@ import type {
 	ManagedAccount,
 	ManagedDomain,
 	ManagedMailbox,
+	MailboxSupervisionResponse,
 } from "./types";
 
 export const permissionLabels: Record<NonNullable<AccountMailboxAccessItem["permission"]>, string> = {
@@ -204,4 +205,23 @@ export async function removeManagedMailbox(mailboxId: string): Promise<void> {
 	const response = await authFetch(`/api/mailboxes/${mailboxId}`, { method: "DELETE" });
 	const data = (await response.json()) as { error?: string };
 	if (!response.ok) throw new Error(data.error ?? "Unable to remove mailbox");
+}
+
+export async function fetchMailboxSupervision(accountId: string): Promise<MailboxSupervisionResponse> {
+	const res = await authFetch(`/api/admin/mailbox-supervisors?accountId=${encodeURIComponent(accountId)}`, { cache: "no-store" });
+	const json = (await res.json().catch(() => ({}))) as MailboxSupervisionResponse;
+	if (!res.ok) throw new Error(json.error ?? "Failed to load supervision");
+	return json;
+}
+
+export async function setMailboxSupervisor(mailboxId: string, userId: string, enabled: boolean): Promise<void> {
+	const res = await authFetch("/api/admin/mailbox-supervisors", {
+		method: enabled ? "POST" : "DELETE",
+		headers: { "Content-Type": "application/json" },
+		body: JSON.stringify({ mailboxId, userId }),
+	});
+	if (!res.ok) {
+		const json = (await res.json().catch(() => ({}))) as { error?: string };
+		throw new Error(json.error ?? "Failed to update supervision");
+	}
 }

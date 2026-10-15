@@ -36,6 +36,8 @@ export type MailboxOption = {
 	type?: "personal" | "shared";
 	permission?: "read_only" | "send_as" | "send_on_behalf" | "full_access";
 	isPrimary?: boolean;
+	/** Read-only supervision of another account's mailbox. */
+	supervised?: boolean;
 	senderAddresses?: string[];
 };
 
