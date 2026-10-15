@@ -167,30 +167,37 @@ export function RegisterClient() {
       return;
     }
 
-    const { ok, data } = await submitRegistration(form, {
-      firstRun: true,
-      domain,
-      enableSending: setupDomain
-        ? setupEnableSending
-        : primaryDomainSendingRequested ?? undefined,
-      replaceMxRecords,
-    });
-    setLoading(false);
-    if (!ok) {
-      if (data.code === "MX_RECORDS_CONFLICT") {
-        setMxRecordsExist(true);
-        setReplaceMxRecords(false);
-        setError(null);
+    try {
+      const { ok, data } = await submitRegistration(form, {
+        firstRun: true,
+        domain,
+        enableSending: setupDomain
+          ? setupEnableSending
+          : primaryDomainSendingRequested ?? undefined,
+        replaceMxRecords,
+      });
+      if (!ok) {
+        if (data.code === "MX_RECORDS_CONFLICT") {
+          setMxRecordsExist(true);
+          setReplaceMxRecords(false);
+          setError(null);
+          setTurnstileReset((value) => value + 1);
+          return;
+        }
+        setError(
+          typeof data.error === "string" ? data.error : t("setup.registrationFailed"),
+        );
         setTurnstileReset((value) => value + 1);
         return;
       }
-      setError(
-        typeof data.error === "string" ? data.error : t("setup.registrationFailed"),
-      );
+      window.location.assign(data.redirect ?? "/login");
+    } catch (error) {
+      // Never leave the button stuck in its loading state on an unexpected failure.
+      setError(error instanceof Error ? error.message : t("setup.registrationFailed"));
       setTurnstileReset((value) => value + 1);
-      return;
+    } finally {
+      setLoading(false);
     }
-    window.location.assign(data.redirect ?? "/login");
   }
 
   const showDomainStep = hasPrimaryDomain === false && step === 2;

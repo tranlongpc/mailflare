@@ -89,9 +89,12 @@ and the DNS page shows what to set by hand.
 
 ## Configuration reference
 
+All settings are environment variables. On startup the server also loads a `.env` file from the run directory (or `ENV_FILE`, if set) via Node's built-in parser, so you can keep them in `/path/to/app/.env` instead of exporting each one; real environment variables (from PM2, systemd or the shell) still take precedence over the file. Keep `.env` out of version control and `chmod 600` it.
+
 | Variable | Default | Purpose |
 |---|---|---|
 | `PORT` | `3000` | HTTP port |
+| `ENV_FILE` | `.env` | Path to the env file loaded at startup |
 | `DATA_DIR` | `/data` | SQLite database, blobs and backups |
 | `APP_URL` | request origin | Public URL behind a proxy |
 | `SMTP_INBOUND_PORT` | `25` | Inbound SMTP; `0` disables |

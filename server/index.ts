@@ -1,7 +1,6 @@
 import "./load-env";
 import { createServer } from "node:http";
 import { join, resolve } from "node:path";
-import { parse } from "node:url";
 import next from "next";
 import { WebSocketServer } from "ws";
 import { rejectsCrossSiteSessionMutation } from "@/lib/auth/origin";
@@ -48,12 +47,12 @@ async function main() {
 			response.writeHead(403, { "Content-Type": "application/json" }).end(JSON.stringify({ error: "Cross-site request rejected" }));
 			return;
 		}
-		void handle(request, response, parse(request.url ?? "/", true));
+		void handle(request, response);
 	});
 
 	const wss = new WebSocketServer({ noServer: true });
 	server.on("upgrade", (request, socket, head) => {
-		const { pathname } = parse(request.url ?? "/");
+		const { pathname } = new URL(request.url ?? "/", "http://localhost");
 		if (pathname !== "/api/realtime") {
 			// Next's own dev-mode HMR socket, or anything else, is not ours.
 			if (dev) app.getUpgradeHandler()(request, socket, head);

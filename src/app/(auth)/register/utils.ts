@@ -75,7 +75,9 @@ export async function submitRegistration(
 		),
 	});
 
-	const data = (await res.json()) as RegisterResult;
+	// A gateway 502/504 (proxy timeout) returns an HTML body, not JSON, so parse defensively
+	// and surface the status instead of throwing and leaving the submit button stuck.
+	const data = (await res.json().catch(() => ({ error: `Registration failed (HTTP ${res.status})` }))) as RegisterResult;
 	if (res.ok) clearClientSessionToken();
 	return { ok: res.ok, data };
 }

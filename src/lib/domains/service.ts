@@ -20,6 +20,7 @@ import type { DomainProvisioningChanges } from "@/lib/domains/types";
 import { findSendingSubdomain } from "@/lib/domains/sending-status";
 import { preflightDomain } from "@/lib/domains/preflight";
 import { hasCloudflareCredentials } from "@/lib/runtime";
+import { CloudflareApiError } from "@/lib/cloudflare-api-error";
 
 export type DomainDnsView = {
 	routing: { records: CfDnsRecord[]; missing: CfDnsRecord[]; status?: string };
@@ -164,7 +165,11 @@ export async function getDomainDns(
 		getEmailRoutingDns(env, domain.zoneId),
 		getEmailRoutingSettings(env, domain.zoneId),
 		listSendingSubdomains(env, domain.zoneId).catch((error) => {
-			console.warn("getDomainDns: failed to list sending subdomains", error);
+			if (error instanceof CloudflareApiError && error.status === 403) {
+				console.warn(`getDomainDns: Cloudflare Email Sending is not available for ${domain.hostname} (403). Give CF_TOKEN the "Email Sending: Edit" permission, or send through Resend or SES.`);
+			} else {
+				console.warn("getDomainDns: failed to list sending subdomains", error);
+			}
 			return [];
 		}),
 	]);
