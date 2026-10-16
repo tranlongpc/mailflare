@@ -2055,5 +2055,6 @@
 	"account.supervision.choose": "Choose an account",
 	"account.supervision.add": "Add",
 	"account.supervision.remove": "Remove {name}",
-	"account.supervision.failed": "Could not update forwarding"
+	"account.supervision.failed": "Could not update forwarding",
+	"account.openAsAdmin": "Open as admin (view only sign-in)"
 }

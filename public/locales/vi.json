@@ -2040,5 +2040,6 @@
 	"account.supervision.choose": "Chọn account",
 	"account.supervision.add": "Thêm",
 	"account.supervision.remove": "Gỡ {name}",
-	"account.supervision.failed": "Không cập nhật được chuyển tiếp"
+	"account.supervision.failed": "Không cập nhật được chuyển tiếp",
+	"account.openAsAdmin": "Mở với quyền admin"
 }

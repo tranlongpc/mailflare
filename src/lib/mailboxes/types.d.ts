@@ -26,7 +26,8 @@ export type AuditAction =
 	| "mailbox.access"
 	| "email.supervisor_view"
 	| "mailbox.supervisor_grant"
-	| "mailbox.supervisor_revoke";
+	| "mailbox.supervisor_revoke"
+	| "auth.impersonate";
 
 export type AuditLogInput = {
 	actorUserId?: string | null;

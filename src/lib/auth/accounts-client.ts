@@ -8,6 +8,8 @@ export type BrowserAccount = {
 	name: string;
 	hasAvatar: boolean;
 	active: boolean;
+	/** The primary admin manages this account and can open it without its password (impersonation). */
+	managed?: boolean;
 };
 
 export async function fetchBrowserAccounts(): Promise<BrowserAccount[]> {

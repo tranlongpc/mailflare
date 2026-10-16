@@ -2055,5 +2055,6 @@
 	"account.supervision.choose": "Konto wählen",
 	"account.supervision.add": "Hinzufügen",
 	"account.supervision.remove": "{name} entfernen",
-	"account.supervision.failed": "Weiterleitung konnte nicht aktualisiert werden"
+	"account.supervision.failed": "Weiterleitung konnte nicht aktualisiert werden",
+	"account.openAsAdmin": "Als Admin öffnen"
 }

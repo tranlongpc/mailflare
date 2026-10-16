@@ -393,6 +393,11 @@ export function MailboxSelector({ initialUser }: MailboxSelectorProps = {}) {
 								<p className="truncate text-sm font-semibold text-neutral-900">{account.name}</p>
 								<p className="truncate text-xs text-neutral-500">{account.email}</p>
 							</div>
+							{account.managed && (
+								<span className="shrink-0 text-amber-600" title={t("account.openAsAdmin")} aria-label={t("account.openAsAdmin")}>
+									<Eye className="h-4 w-4" />
+								</span>
+							)}
 						</Button>
 					))}
 				</div>
